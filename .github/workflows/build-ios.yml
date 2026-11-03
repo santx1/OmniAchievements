@@ -6,9 +6,12 @@ on:
     tags: [ 'v*' ]
   workflow_dispatch:
 
+env:
+  CI: true
+
 jobs:
   build-ipa:
-    name: Compile iOS / iPadOS IPA
+    name: Compile iOS & iPadOS IPA
     runs-on: macos-14
     steps:
       - name: Checkout Code
@@ -24,48 +27,49 @@ jobs:
       - name: Install Client Dependencies
         run: |
           cd client
-          npm ci || npm install
+          npm install
 
       - name: Build Web Application
         run: |
           cd client
           npm run build
 
-      - name: Initialize Capacitor iOS
+      - name: Sync Capacitor iOS Project
         run: |
           cd client
-          npx cap add ios || true
+          npx cap telemetry off || true
           npx cap sync ios
 
-      - name: Set Xcode Version
-        run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+      - name: Install CocoaPods
+        run: |
+          cd client/ios/App
+          pod install --repo-update || pod install
 
       - name: Build iOS App with Xcodebuild
         run: |
           cd client/ios/App
-          pod install || true
           xcodebuild -workspace App.xcworkspace \
                      -scheme App \
                      -configuration Release \
-                     -destination 'generic/platform=iOS' \
-                     -archivePath App.xcarchive \
-                     archive \
-                     CODE_SIGN_IDENTITY="" \
+                     -sdk iphoneos \
+                     -derivedDataPath ./build-output \
+                     CODE_SIGNING_ALLOWED=NO \
                      CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGNING_ALLOWED=NO
+                     CODE_SIGN_IDENTITY="" \
+                     clean build
 
-      - name: Package Unsigned IPA
+      - name: Package Unsigned Sideloadable IPA
         run: |
           cd client/ios/App
-          mkdir -p build/Payload
-          cp -r App.xcarchive/Products/Applications/App.app build/Payload/
-          cd build
-          zip -r OmniAchievements.ipa Payload
-          mv OmniAchievements.ipa ../../../OmniAchievements.ipa
+          mkdir -p Payload
+          cp -r ./build-output/Build/Products/Release-iphoneos/App.app Payload/
+          zip -r -9 OmniAchievements.ipa Payload
+          ls -lh OmniAchievements.ipa
 
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
           name: OmniAchievements-iOS-IPA
-          path: OmniAchievements.ipa
+          path: client/ios/App/OmniAchievements.ipa
+          if-no-files-found: error
           retention-days: 30

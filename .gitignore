@@ -40,5 +40,10 @@ server/dist/
 # Capacitor & iOS build artifacts
 *.ipa
 *.xcarchive
-client/ios/
+client/ios/App/build
+client/ios/App/Pods
+client/ios/App/output
+client/ios/App/App/public
+client/ios/DerivedData
+client/ios/**/xcuserdata
 client/android/
