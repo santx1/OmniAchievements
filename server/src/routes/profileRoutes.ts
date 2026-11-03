@@ -16,7 +16,7 @@ router.use(masterAuth);
  */
 router.get('/', (req: Request, res: Response) => {
   const profiles = db.prepare(`
-    SELECT id, name, avatar, theme, accent_color, steam_id, created_at, updated_at
+    SELECT id, name, avatar, theme, accent_color, steam_id, retro_username, created_at, updated_at
     FROM profiles
     ORDER BY created_at ASC
   `).all();
@@ -127,7 +127,18 @@ router.get('/:id', (req: Request, res: Response) => {
  */
 router.put('/:id', (req: Request, res: Response) => {
   const { id } = req.params;
-  const { name, avatar, pin, currentPin, theme, accent_color, steam_id, steam_api_key } = req.body;
+  const {
+    name,
+    avatar,
+    pin,
+    currentPin,
+    theme,
+    accent_color,
+    steam_id,
+    steam_api_key,
+    retro_username,
+    retro_api_key
+  } = req.body;
 
   const profile = db.prepare('SELECT * FROM profiles WHERE id = ?').get(id) as any;
   if (!profile) {
@@ -156,6 +167,8 @@ router.put('/:id', (req: Request, res: Response) => {
   const updatedAccent = accent_color !== undefined ? accent_color : profile.accent_color;
   const updatedSteamId = steam_id !== undefined ? steam_id.trim() : profile.steam_id;
   const updatedApiKey = steam_api_key !== undefined ? steam_api_key.trim() : profile.steam_api_key;
+  const updatedRetroUser = retro_username !== undefined ? retro_username.trim() : (profile.retro_username || '');
+  const updatedRetroKey = retro_api_key !== undefined ? retro_api_key.trim() : (profile.retro_api_key || '');
   const now = new Date().toISOString();
 
   db.prepare(`
@@ -167,6 +180,8 @@ router.put('/:id', (req: Request, res: Response) => {
       accent_color = ?,
       steam_id = ?,
       steam_api_key = ?,
+      retro_username = ?,
+      retro_api_key = ?,
       updated_at = ?
     WHERE id = ?
   `).run(
@@ -177,12 +192,14 @@ router.put('/:id', (req: Request, res: Response) => {
     updatedAccent,
     updatedSteamId,
     updatedApiKey,
+    updatedRetroUser,
+    updatedRetroKey,
     now,
     id
   );
 
   const updatedProfile = db.prepare(`
-    SELECT id, name, avatar, theme, accent_color, steam_id, created_at, updated_at
+    SELECT id, name, avatar, theme, accent_color, steam_id, retro_username, created_at, updated_at
     FROM profiles WHERE id = ?
   `).get(id);
 

@@ -36,11 +36,23 @@ export const SettingsView: React.FC = () => {
   const [name, setName] = useState(activeProfile?.name || '');
   const [avatar, setAvatar] = useState(activeProfile?.avatar || PRESET_AVATARS[0]);
   const [steamId, setSteamId] = useState(activeProfile?.steam_id || '');
+  const [retroUsername, setRetroUsername] = useState(activeProfile?.retro_username || '');
+  const [retroApiKey, setRetroApiKey] = useState(activeProfile?.retro_api_key || '');
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileSuccessMsg, setProfileSuccessMsg] = useState<string | null>(null);
   const [profileErrorMsg, setProfileErrorMsg] = useState<string | null>(null);
+
+  // Server Connection URL
+  const [serverUrlInput, setServerUrlInput] = useState(api.getServerUrl());
+  const [connectionStatus, setConnectionStatus] = useState<string | null>(null);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+
+  // Backup & Restore
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [backupMsg, setBackupMsg] = useState<string | null>(null);
 
   // Server settings fields
   const [serverSettings, setServerSettings] = useState<any | null>(null);
@@ -82,7 +94,9 @@ export const SettingsView: React.FC = () => {
         avatar,
         theme,
         accent_color: accentColor,
-        steam_id: steamId.trim()
+        steam_id: steamId.trim(),
+        retro_username: retroUsername.trim(),
+        retro_api_key: retroApiKey.trim()
       };
 
       if (newPin) {
@@ -139,6 +153,58 @@ export const SettingsView: React.FC = () => {
       setPairingToken(`omni_token_${activeProfile.id}_${Date.now()}`);
     } finally {
       setIsGeneratingPairToken(false);
+    }
+  };
+
+  const handleSaveServerUrl = async () => {
+    setIsTestingConnection(true);
+    setConnectionStatus(null);
+    api.setServerUrl(serverUrlInput);
+    const res = await api.testConnection(serverUrlInput);
+    setIsTestingConnection(false);
+    if (res.online) {
+      setConnectionStatus(`✓ Connected successfully! (${res.latencyMs}ms latency)`);
+    } else {
+      setConnectionStatus('✕ Could not reach server. Check IP, port, or Wi-Fi.');
+    }
+  };
+
+  const handleExportBackup = async () => {
+    setIsExporting(true);
+    setBackupMsg(null);
+    try {
+      const data = await api.exportBackup();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `omniachievements-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setBackupMsg('✓ Backup downloaded successfully!');
+    } catch (err: any) {
+      setBackupMsg(`✕ Export failed: ${err.message}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    setBackupMsg(null);
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      await api.importBackup(json);
+      setBackupMsg('✓ Backup restored successfully! Refreshing...');
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err: any) {
+      setBackupMsg(`✕ Restore failed: ${err.message}`);
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -278,6 +344,35 @@ export const SettingsView: React.FC = () => {
             </div>
           </div>
 
+          {/* RetroAchievements Integration */}
+          <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
+            <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 block mb-2">
+              RetroAchievements (Optional - For Emulated Games)
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] text-slate-500 mb-1">Username</label>
+                <input
+                  type="text"
+                  value={retroUsername}
+                  onChange={(e) => setRetroUsername(e.target.value)}
+                  placeholder="e.g. RetroPlayer"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] text-slate-500 mb-1">Web API Key</label>
+                <input
+                  type="password"
+                  value={retroApiKey}
+                  onChange={(e) => setRetroApiKey(e.target.value)}
+                  placeholder="Get from retroachievements.org/controlpanel.php"
+                  className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Change 6-Digit PIN */}
           <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block mb-2">
@@ -323,6 +418,98 @@ export const SettingsView: React.FC = () => {
             <span>{isUpdatingProfile ? 'Saving...' : 'Save Profile Changes'}</span>
           </button>
         </form>
+      </div>
+
+      {/* Server URL & Network Connectivity */}
+      <div className="p-6 rounded-3xl glass dark:glass border border-slate-200/50 dark:border-slate-800/80 shadow-sm space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+            <Server className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-slate-900 dark:text-white">
+              Server Network Connection (iOS / iPadOS)
+            </h3>
+            <p className="text-xs text-slate-400">
+              Set local IP or remote domain/Tailscale URL for handheld & mobile access
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            OmniAchievements Server URL
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={serverUrlInput}
+              onChange={(e) => setServerUrlInput(e.target.value)}
+              placeholder="e.g. http://192.168.1.100:3001 or https://games.yourdomain.com"
+              className="flex-grow px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
+            />
+            <button
+              type="button"
+              onClick={handleSaveServerUrl}
+              disabled={isTestingConnection}
+              className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shrink-0 transition-colors"
+            >
+              {isTestingConnection ? 'Testing...' : 'Save & Test'}
+            </button>
+          </div>
+          {connectionStatus && (
+            <p className={`text-xs font-semibold ${connectionStatus.startsWith('✓') ? 'text-emerald-400' : 'text-rose-400'}`}>
+              {connectionStatus}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Backup & Disaster Recovery */}
+      <div className="p-6 rounded-3xl glass dark:glass border border-slate-200/50 dark:border-slate-800/80 shadow-sm space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+            <Save className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-slate-900 dark:text-white">
+              Database Backups & Disaster Recovery
+            </h3>
+            <p className="text-xs text-slate-400">
+              Automated daily SQLite snapshots are saved in <code className="text-slate-400">./data/backups/</code>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <button
+            type="button"
+            disabled={isExporting}
+            onClick={handleExportBackup}
+            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors flex items-center gap-1.5"
+          >
+            <Save className="w-3.5 h-3.5 text-indigo-400" />
+            <span>{isExporting ? 'Exporting...' : 'Download Full Backup (JSON)'}</span>
+          </button>
+
+          <label className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleImportBackup}
+              disabled={isImporting}
+              className="hidden"
+            />
+            <Server className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{isImporting ? 'Restoring...' : 'Restore from Backup (JSON)'}</span>
+          </label>
+        </div>
+
+        {backupMsg && (
+          <p className={`text-xs font-semibold ${backupMsg.startsWith('✓') ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {backupMsg}
+          </p>
+        )}
       </div>
 
       {/* 2. Decky Plugin (Legion Go S SteamOS Integration) */}

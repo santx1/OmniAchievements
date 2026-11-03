@@ -14,6 +14,9 @@ import steamRoutes from './routes/steamRoutes.js';
 import steamGridDbRoutes from './routes/steamGridDbRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
 import deckyRoutes from './routes/deckyRoutes.js';
+import retroRoutes from './routes/retroRoutes.js';
+import backupRoutes from './routes/backupRoutes.js';
+import { BackupService } from './services/backupService.js';
 
 const app = express();
 
@@ -30,6 +33,7 @@ app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 // Initialize DB schema & default profile
 initDatabase();
+BackupService.initBackupSystem();
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -40,6 +44,8 @@ app.use('/api/steam', steamRoutes);
 app.use('/api/steamgriddb', steamGridDbRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/decky', deckyRoutes);
+app.use('/api/retro', retroRoutes);
+app.use('/api/backup', backupRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

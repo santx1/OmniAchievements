@@ -9,6 +9,8 @@ export interface Profile {
   theme: 'dark' | 'light' | 'system';
   accent_color: string;
   steam_id: string;
+  retro_username?: string;
+  retro_api_key?: string;
   hasCustomApiKey?: boolean;
   created_at?: string;
   updated_at?: string;

@@ -212,6 +212,77 @@ router.get('/achievements/:shortcutId', (req: Request, res: Response) => {
 });
 
 /**
+ * Auto-detect & Fuzzy Match running shortcut title to OmniAchievements games
+ */
+router.get('/match', (req: Request, res: Response) => {
+  const profileId = (req as any).profileId;
+  const name = String(req.query.name || '').trim();
+
+  if (!name) {
+    return res.json({ matches: [] });
+  }
+
+  // Clean name: remove common launcher prefixes or suffixes
+  const cleanName = name
+    .replace(/\.exe$/i, '')
+    .replace(/\.sh$/i, '')
+    .replace(/\s*\(.*?\)\s*/g, '')
+    .trim();
+
+  const games = db.prepare(`
+    SELECT id, title, platform, cover_image, status, total_achievements, unlocked_achievements
+    FROM games
+    WHERE profile_id = ? AND (
+      title LIKE ? OR title LIKE ? OR ? LIKE ('%' || title || '%')
+    )
+    ORDER BY (CASE WHEN title = ? THEN 1 WHEN title LIKE ? THEN 2 ELSE 3 END)
+    LIMIT 5
+  `).all(
+    profileId,
+    `%${cleanName}%`,
+    `%${name}%`,
+    cleanName,
+    cleanName,
+    `${cleanName}%`
+  );
+
+  res.json({ matches: games });
+});
+
+/**
+ * Log playtime for non-Steam games from Decky
+ */
+router.post('/log-playtime', (req: Request, res: Response) => {
+  const profileId = (req as any).profileId;
+  const { shortcutId, gameId, minutes } = req.body;
+
+  let targetGameId = gameId;
+
+  if (!targetGameId && shortcutId) {
+    const link = db.prepare('SELECT game_id FROM decky_links WHERE profile_id = ? AND steam_shortcut_id = ?').get(profileId, String(shortcutId)) as any;
+    if (link) targetGameId = link.game_id;
+  }
+
+  if (!targetGameId) {
+    return res.status(404).json({ error: 'Game not found for playtime logging' });
+  }
+
+  const addMinutes = Math.max(1, parseInt(minutes) || 1);
+  const now = new Date().toISOString();
+
+  db.prepare(`
+    UPDATE games SET
+      playtime_minutes = playtime_minutes + ?,
+      last_played_at = ?,
+      updated_at = ?
+    WHERE id = ? AND profile_id = ?
+  `).run(addMinutes, now, now, targetGameId, profileId);
+
+  const updated = db.prepare('SELECT id, title, playtime_minutes FROM games WHERE id = ?').get(targetGameId);
+  res.json({ success: true, game: updated });
+});
+
+/**
  * Toggle achievement unlock from Decky overlay
  */
 router.post('/toggle-achievement', (req: Request, res: Response) => {

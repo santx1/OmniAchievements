@@ -19,6 +19,8 @@ export function initDatabase() {
       accent_color TEXT DEFAULT '#6366f1',
       steam_id TEXT DEFAULT '',
       steam_api_key TEXT DEFAULT '',
+      retro_username TEXT DEFAULT '',
+      retro_api_key TEXT DEFAULT '',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -95,6 +97,14 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_blacklist_profile_app ON steam_blacklist(profile_id, steam_app_id);
     CREATE INDEX IF NOT EXISTS idx_decky_links_shortcut ON decky_links(steam_shortcut_id);
   `);
+
+  // Migrations for existing DBs
+  try {
+    db.exec(`ALTER TABLE profiles ADD COLUMN retro_username TEXT DEFAULT ''`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE profiles ADD COLUMN retro_api_key TEXT DEFAULT ''`);
+  } catch (e) {}
 
   // Create default admin/main profile if none exists
   const profileCount = db.prepare('SELECT COUNT(*) as count FROM profiles').get() as { count: number };

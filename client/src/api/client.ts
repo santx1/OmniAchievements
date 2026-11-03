@@ -1,11 +1,38 @@
 import { Game, Achievement, Profile, StatsData, BlacklistItem, Platform, GameStatus } from '../types/index.js';
 
-const API_BASE = '/api';
+const DEFAULT_API_BASE = '/api';
 
 class ApiClient {
+  private serverUrl: string = localStorage.getItem('omni_server_url') || '';
   private masterToken: string | null = localStorage.getItem('omni_master_token');
   private profileToken: string | null = localStorage.getItem('omni_profile_token');
   private activeProfileId: string | null = localStorage.getItem('omni_active_profile_id');
+
+  setServerUrl(url: string) {
+    this.serverUrl = url.trim().replace(/\/+$/, '');
+    if (this.serverUrl) {
+      localStorage.setItem('omni_server_url', this.serverUrl);
+    } else {
+      localStorage.removeItem('omni_server_url');
+    }
+  }
+
+  getServerUrl(): string {
+    return this.serverUrl;
+  }
+
+  async testConnection(url?: string): Promise<{ online: boolean; latencyMs: number }> {
+    const target = (url || this.serverUrl || '').trim().replace(/\/+$/, '');
+    const endpoint = target ? `${target}/api/health` : '/api/health';
+    const start = Date.now();
+    try {
+      const res = await fetch(endpoint, { method: 'GET' });
+      const data = await res.json();
+      return { online: data?.status === 'healthy', latencyMs: Date.now() - start };
+    } catch (e) {
+      return { online: false, latencyMs: 0 };
+    }
+  }
 
   setMasterToken(token: string | null) {
     this.masterToken = token;
@@ -58,7 +85,8 @@ class ApiClient {
       headers['X-Profile-Id'] = this.activeProfileId;
     }
 
-    const response = await fetch(`${API_BASE}${endpoint}`, {
+    const base = this.serverUrl ? `${this.serverUrl}/api` : '/api';
+    const response = await fetch(`${base}${endpoint}`, {
       ...options,
       headers
     });
@@ -281,6 +309,30 @@ class ApiClient {
         masterPassword: this.masterToken,
         profileId
       })
+    });
+  }
+
+  // RetroAchievements
+  async searchRetroAchievements(title: string): Promise<{ results: any[] }> {
+    return this.request(`/retro/search?title=${encodeURIComponent(title)}`);
+  }
+
+  async syncRetroAchievements(gameId: string, retroGameId: number | string): Promise<any> {
+    return this.request('/retro/sync', {
+      method: 'POST',
+      body: JSON.stringify({ gameId, retroGameId })
+    });
+  }
+
+  // Backups
+  async exportBackup(): Promise<any> {
+    return this.request('/backup/export');
+  }
+
+  async importBackup(data: any): Promise<any> {
+    return this.request('/backup/import', {
+      method: 'POST',
+      body: JSON.stringify(data)
     });
   }
 }

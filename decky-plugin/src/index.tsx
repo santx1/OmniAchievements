@@ -29,6 +29,7 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
   const [activeShortcutName, setActiveShortcutName] = useState<string>("");
 
   const [availableGames, setAvailableGames] = useState<any[]>([]);
+  const [suggestedMatch, setSuggestedMatch] = useState<any | null>(null);
   const [selectedGameId, setSelectedGameId] = useState<string>("");
   const [linkedGame, setLinkedGame] = useState<any | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -43,16 +44,43 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
     });
 
     detectRunningGame();
-  }, []);
 
-  const detectRunningGame = () => {
+    // Periodic playtime logger every 5 minutes while gaming
+    const interval = setInterval(() => {
+      if (activeShortcutId && linkedGame) {
+        serverApi.callPluginMethod("log_playtime", {
+          shortcut_id: activeShortcutId,
+          game_id: linkedGame.id,
+          minutes: 5
+        });
+      }
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [activeShortcutId, linkedGame]);
+
+  const detectRunningGame = async () => {
     try {
       const activeApp = (window as any).SteamClient?.Apps?.GetActiveGameInfo?.() ||
                         (window as any).SteamClient?.GameSessions?.GetActiveGameSession?.();
       if (activeApp && activeApp.nAppId) {
-        setActiveShortcutId(String(activeApp.nAppId));
-        setActiveShortcutName(activeApp.strGameTitle || "Running Non-Steam Game");
-        loadAchievementsForApp(String(activeApp.nAppId));
+        const appId = String(activeApp.nAppId);
+        const appTitle = activeApp.strGameTitle || "Running Game";
+        setActiveShortcutId(appId);
+        setActiveShortcutName(appTitle);
+
+        // Check if already linked
+        const achRes: any = await serverApi.callPluginMethod("get_achievements", { shortcut_id: appId });
+        if (achRes.result && achRes.result.linked) {
+          setLinkedGame(achRes.result.game);
+          setAchievements(achRes.result.achievements || []);
+        } else {
+          // Trigger Fuzzy Match Auto-Suggestion
+          const matchRes: any = await serverApi.callPluginMethod("match_game", { shortcut_name: appTitle });
+          if (matchRes.result?.matches?.length > 0) {
+            setSuggestedMatch(matchRes.result.matches[0]);
+          }
+        }
       }
     } catch (e) {
       console.warn("Could not query active game session from SteamClient", e);
@@ -158,6 +186,34 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
           )}
         </div>
       </PanelSectionRow>
+
+      {/* 1-Click Auto-Detect & Fuzzy Match Suggestion */}
+      {!linkedGame && suggestedMatch && (
+        <PanelSectionRow>
+          <div style={{ padding: "8px", borderRadius: "8px", background: "rgba(99, 102, 241, 0.2)", border: "1px solid rgba(99, 102, 241, 0.5)" }}>
+            <div style={{ fontSize: "11px", color: "#a5b4fc", fontWeight: "bold" }}>Suggested Match Found:</div>
+            <div style={{ fontSize: "13px", fontWeight: "bold", margin: "4px 0" }}>
+              {suggestedMatch.title} ({suggestedMatch.platform})
+            </div>
+            <ButtonItem
+              layout="below"
+              onClick={async () => {
+                setIsLoading(true);
+                await serverApi.callPluginMethod("link_shortcut", {
+                  steam_shortcut_id: activeShortcutId,
+                  game_id: suggestedMatch.id,
+                  shortcut_name: activeShortcutName
+                });
+                await loadAchievementsForApp(activeShortcutId);
+                setSuggestedMatch(null);
+                setIsLoading(false);
+              }}
+            >
+              1-Click Link to {suggestedMatch.title}
+            </ButtonItem>
+          </div>
+        </PanelSectionRow>
+      )}
 
       {!linkedGame && activeShortcutId && (
         <PanelSectionRow>

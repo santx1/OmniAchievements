@@ -2,6 +2,7 @@ import os
 import json
 import urllib.request
 import urllib.error
+import urllib.parse
 import ssl
 
 CONFIG_PATH = os.path.expanduser("~/.config/omni_achievements_decky.json")
@@ -96,6 +97,16 @@ class Plugin:
         return self._api_request("/toggle-achievement", method="POST", body={
             "achievementId": achievement_id,
             "isUnlocked": is_unlocked
+        })
+
+    async def match_game(self, shortcut_name):
+        return self._api_request(f"/match?name={urllib.parse.quote(shortcut_name)}")
+
+    async def log_playtime(self, shortcut_id, game_id, minutes):
+        return self._api_request("/log-playtime", method="POST", body={
+            "shortcutId": str(shortcut_id),
+            "gameId": str(game_id) if game_id else None,
+            "minutes": minutes
         })
 
     # Lifecycle hooks
