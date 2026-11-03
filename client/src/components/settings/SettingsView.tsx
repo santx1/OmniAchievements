@@ -432,6 +432,38 @@ export const SettingsView: React.FC = () => {
                 </button>
               ))}
             </div>
+
+            {/* Custom Picture URL */}
+            <div className="mt-3 p-3 rounded-xl bg-slate-100/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>Or Custom Picture URL</span>
+                {avatar && !avatar.startsWith('data:') && (
+                  <span className="text-[10px] text-indigo-500 font-medium">Custom URL active</span>
+                )}
+              </label>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex-shrink-0 flex items-center justify-center">
+                  <img
+                    src={avatar || DEFAULT_AVATAR}
+                    alt="Avatar preview"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR;
+                    }}
+                  />
+                </div>
+                <input
+                  type="url"
+                  value={avatar.startsWith('data:') ? '' : avatar}
+                  onChange={(e) => setAvatar(e.target.value.trim() || DEFAULT_AVATAR)}
+                  placeholder="Paste direct image URL (https://...)"
+                  className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
+                Paste any web image URL (e.g. Steam, Discord, Gravatar, Imgur) or click a color silhouette above.
+              </p>
+            </div>
           </div>
 
           {/* Theme & Accent Customizer */}

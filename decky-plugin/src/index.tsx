@@ -10,7 +10,31 @@ import {
   staticClasses
 } from "decky-frontend-lib";
 import React, { VFC, useState, useEffect } from "react";
-import { FaTrophy, FaLink, FaSync, FaCheckCircle, FaLock } from "react-icons/fa";
+
+// Self-contained icons for SteamOS Decky Loader (no external npm dependencies required)
+const TrophyIcon = ({ color = "#f59e0b", size = 16 }: { color?: string; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block", verticalAlign: "middle" }}>
+    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+    <path d="M4 22h16" />
+    <path d="M10 14.66V17c0 .55-.45 1-1 1H8c-.55 0-1 .45-1 1v1h10v-1c0-.55-.45-1-1-1h-1c-.55 0-1-.45-1-1v-2.34" />
+    <path d="M6 4h12v6c0 3.31-2.69 6-6 6s-6-2.69-6-6V4z" fill={color} fillOpacity="0.3" />
+  </svg>
+);
+
+const CheckCircleIcon = ({ color = "#10b981", size = 16 }: { color?: string; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block", verticalAlign: "middle" }}>
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <polyline points="22 4 12 14.01 9 11.01" />
+  </svg>
+);
+
+const LockIcon = ({ color = "#666", size = 16 }: { color?: string; size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline-block", verticalAlign: "middle" }}>
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
 
 interface Achievement {
   id: string;
@@ -288,7 +312,7 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
                             style={{ width: "100%", height: "100%", filter: isUnlocked ? "none" : "grayscale(100%)" }}
                           />
                         ) : (
-                          <FaTrophy color={isUnlocked ? "#f59e0b" : "#888"} />
+                          <TrophyIcon color={isUnlocked ? "#f59e0b" : "#888"} />
                         )}
                       </div>
 
@@ -303,7 +327,7 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
                     </div>
 
                     <div>
-                      {isUnlocked ? <FaCheckCircle color="#10b981" /> : <FaLock color="#666" />}
+                      {isUnlocked ? <CheckCircleIcon color="#10b981" /> : <LockIcon color="#666" />}
                     </div>
                   </Focusable>
                 );
@@ -320,7 +344,7 @@ export default definePlugin((serverApi: ServerAPI) => {
   return {
     title: <div className={staticClasses.Title}>OmniAchievements</div>,
     content: <Content serverApi={serverApi} />,
-    icon: <FaTrophy />,
+    icon: <TrophyIcon />,
     onDismount() {}
   };
 });

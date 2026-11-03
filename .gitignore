@@ -20,6 +20,7 @@ build/
 client-dist/
 client/dist/
 server/dist/
+!decky-plugin/dist/
 
 # Environment files
 .env

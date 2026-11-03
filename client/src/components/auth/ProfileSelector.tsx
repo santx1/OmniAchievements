@@ -215,6 +215,27 @@ export const ProfileSelector: React.FC = () => {
                     </button>
                   ))}
                 </div>
+
+                {/* Custom Picture URL */}
+                <div className="mt-2.5 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-slate-900 border border-slate-700 flex-shrink-0 flex items-center justify-center">
+                    <img
+                      src={newAvatar || DEFAULT_AVATAR}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR;
+                      }}
+                    />
+                  </div>
+                  <input
+                    type="url"
+                    value={newAvatar.startsWith('data:') ? '' : newAvatar}
+                    onChange={(e) => setNewAvatar(e.target.value.trim() || DEFAULT_AVATAR)}
+                    placeholder="Or paste custom image URL (https://...)"
+                    className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
               </div>
 
               {/* 6-Digit PIN Setter */}
