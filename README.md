@@ -1,3 +1,5 @@
+Disclaimer: This app has been 100% AI made, including documentation and all the code. If you want a human-made app, this is not for you.
+
 <div align="center">
 
 # 🎮 OmniAchievements
