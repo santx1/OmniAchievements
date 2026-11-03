@@ -1,0 +1,23 @@
+{
+  "name": "omniachievements-decky",
+  "version": "1.0.0",
+  "description": "Decky Loader plugin for OmniAchievements",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w"
+  },
+  "dependencies": {
+    "@decky/ui": "^4.0.0",
+    "decky-frontend-lib": "^4.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^24.0.0",
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-typescript": "^11.0.0",
+    "@types/react": "^18.0.0",
+    "rollup": "^3.0.0",
+    "typescript": "^5.0.0"
+  }
+}

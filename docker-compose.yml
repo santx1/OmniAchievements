@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  omniachievements:
+    container_name: omniachievements
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATA_DIR=/app/data
+      - MASTER_PASSWORD=${MASTER_PASSWORD:-changeme123}
+      - STEAM_API_KEY=${STEAM_API_KEY:-}
+      - STEAMGRIDDB_API_KEY=${STEAMGRIDDB_API_KEY:-}
+      - JWT_SECRET=${JWT_SECRET:-omni_super_secret_jwt_key_9918274}
+    volumes:
+      - ./data:/app/data
