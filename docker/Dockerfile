@@ -33,6 +33,9 @@ COPY --from=server-builder /app/server/dist ./dist
 # Copy frontend built assets
 COPY --from=client-builder /app/client/dist ./client-dist
 
+# Copy decky-plugin into production runtime for in-Decky self-updater
+COPY decky-plugin ./decky-plugin
+
 # Create persistent data directory
 RUN mkdir -p /app/data && chmod 777 /app/data
 VOLUME ["/app/data"]

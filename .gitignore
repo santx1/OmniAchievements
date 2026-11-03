@@ -10,6 +10,8 @@ data/
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+__pycache__/
+*.pyc
 
 # Dependency directories
 node_modules/

@@ -2,10 +2,26 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import db from '../db/database.js';
 import { config } from '../config/index.js';
 
 const router = Router();
+
+function getDeckyPluginDir(): string | null {
+  const candidates = [
+    path.resolve(process.cwd(), 'decky-plugin'),
+    path.resolve(process.cwd(), '..', 'decky-plugin'),
+    '/app/decky-plugin'
+  ];
+  for (const dir of candidates) {
+    if (fs.existsSync(dir) && fs.existsSync(path.join(dir, 'plugin.json'))) {
+      return dir;
+    }
+  }
+  return null;
+}
 
 // Middleware to authenticate Decky requests using pairing token or master password
 function deckyAuth(req: Request, res: Response, next: any) {
@@ -45,6 +61,71 @@ router.get('/ping', (req: Request, res: Response) => {
     version: '1.0.0',
     time: new Date().toISOString()
   });
+});
+
+/**
+ * Decky Plugin metadata & version check endpoint
+ */
+router.get('/plugin-info', (req: Request, res: Response) => {
+  const pluginDir = getDeckyPluginDir();
+  if (!pluginDir) {
+    return res.status(404).json({ error: 'Decky plugin directory not found on server' });
+  }
+
+  try {
+    const pluginJsonRaw = fs.readFileSync(path.join(pluginDir, 'plugin.json'), 'utf8');
+    const pluginJson = JSON.parse(pluginJsonRaw);
+
+    let lastModified = new Date().toISOString();
+    const distPath = path.join(pluginDir, 'dist', 'index.js');
+    if (fs.existsSync(distPath)) {
+      lastModified = fs.statSync(distPath).mtime.toISOString();
+    }
+
+    res.json({
+      name: pluginJson.name || 'OmniAchievements',
+      version: pluginJson.version || '1.0.0',
+      description: pluginJson.description || 'Synchronize and display custom achievements on non-Steam games in SteamOS',
+      author: pluginJson.author || 'OmniSync',
+      changelog: 'Latest release build from your OmniAchievements server',
+      updatedAt: lastModified
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: `Failed to read plugin metadata: ${err.message}` });
+  }
+});
+
+/**
+ * Download plugin files bundle for 1-click in-Decky update
+ */
+router.get('/plugin-bundle', (req: Request, res: Response) => {
+  const pluginDir = getDeckyPluginDir();
+  if (!pluginDir) {
+    return res.status(404).json({ error: 'Decky plugin directory not found on server' });
+  }
+
+  try {
+    const pluginJsonRaw = fs.readFileSync(path.join(pluginDir, 'plugin.json'), 'utf8');
+    const pluginJson = JSON.parse(pluginJsonRaw);
+
+    const filesToBundle = ['plugin.json', 'package.json', 'main.py', 'index.js', 'dist/index.js'];
+    const files: Record<string, string> = {};
+
+    for (const rel of filesToBundle) {
+      const fullPath = path.join(pluginDir, rel);
+      if (fs.existsSync(fullPath)) {
+        files[rel] = fs.readFileSync(fullPath, 'utf8');
+      }
+    }
+
+    res.json({
+      name: pluginJson.name || 'OmniAchievements',
+      version: pluginJson.version || '1.0.0',
+      files
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: `Failed to bundle plugin files: ${err.message}` });
+  }
 });
 
 /**

@@ -25,10 +25,23 @@ var Content = ({ serverApi }) => {
   const [linkedGame, setLinkedGame] = useState(null);
   const [achievements, setAchievements] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState("1.0.0");
+  const [latestVersion, setLatestVersion] = useState(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [updateSource, setUpdateSource] = useState("auto");
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
+  const [updateStatusMsg, setUpdateStatusMsg] = useState(null);
+  const [updateSuccess, setUpdateSuccess] = useState(false);
   useEffect(() => {
     serverApi.callPluginMethod("get_config", {}).then((res) => {
       if (res.result) {
         setServerUrl(res.result.server_url || "http://192.168.1.100:3001");
+      }
+    });
+    serverApi.callPluginMethod("get_plugin_version", {}).then((res) => {
+      if (res.result?.version) {
+        setCurrentVersion(res.result.version);
       }
     });
     detectRunningGame();
@@ -119,10 +132,73 @@ var Content = ({ serverApi }) => {
       await loadAchievementsForApp(activeShortcutId);
     }
   };
+  const handleCheckUpdate = async (source = updateSource) => {
+    setIsCheckingUpdate(true);
+    setUpdateStatusMsg("Checking for updates...");
+    setUpdateSuccess(false);
+    try {
+      const res = await serverApi.callPluginMethod("check_for_updates", { source });
+      const data = res.result;
+      if (data) {
+        setCurrentVersion(data.current_version || currentVersion);
+        setLatestVersion(data.latest_version);
+        setUpdateAvailable(Boolean(data.update_available));
+        if (data.update_available) {
+          setUpdateStatusMsg(`\u26A1 Update Available: v${data.latest_version} (from ${data.source})`);
+        } else if (data.error) {
+          setUpdateStatusMsg(`\u2715 ${data.error}`);
+        } else {
+          setUpdateStatusMsg(`\u2713 Plugin is up to date (v${data.current_version})`);
+        }
+      }
+    } catch (e) {
+      setUpdateStatusMsg(`\u2715 Check failed: ${e.message || String(e)}`);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+  const handleApplyUpdate = async () => {
+    setIsApplyingUpdate(true);
+    setUpdateStatusMsg("Downloading and applying update files...");
+    try {
+      const res = await serverApi.callPluginMethod("apply_update", { source: updateSource });
+      const data = res.result;
+      if (data?.success) {
+        setUpdateSuccess(true);
+        setCurrentVersion(data.new_version);
+        setUpdateAvailable(false);
+        setUpdateStatusMsg(`\u2713 Successfully updated to v${data.new_version}! Reload Decky to apply.`);
+        try {
+          serverApi.toaster?.toast({
+            title: "OmniAchievements Updated",
+            body: `Plugin updated to v${data.new_version}!`
+          });
+        } catch (_) {
+        }
+      } else {
+        setUpdateStatusMsg(`\u2715 Update error: ${data?.error || "Unknown error"}`);
+      }
+    } catch (e) {
+      setUpdateStatusMsg(`\u2715 Failed: ${e.message || String(e)}`);
+    } finally {
+      setIsApplyingUpdate(false);
+    }
+  };
+  const handleReloadDecky = () => {
+    try {
+      if (window.DeckyPluginLoader?.reloadPlugin) {
+        window.DeckyPluginLoader.reloadPlugin("OmniAchievements");
+      } else {
+        window.location.reload();
+      }
+    } catch (e) {
+      window.location.reload();
+    }
+  };
   const unlockedCount = achievements.filter((a) => a.is_unlocked === 1).length;
   const totalCount = achievements.length;
   const progressPct = totalCount > 0 ? unlockedCount / totalCount * 100 : 0;
-  return /* @__PURE__ */ React.createElement(PanelSection, { title: "OmniAchievements Sync" }, /* @__PURE__ */ React.createElement(PanelSectionRow, null, /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(PanelSection, { title: "OmniAchievements Sync" }, /* @__PURE__ */ React.createElement(PanelSectionRow, null, /* @__PURE__ */ React.createElement(
     TextField,
     {
       label: "Server URL (IP:Port)",
@@ -204,7 +280,48 @@ var Content = ({ serverApi }) => {
       ), /* @__PURE__ */ React.createElement("div", { style: { flex: 1, minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: "12px", fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, ach.display_name), /* @__PURE__ */ React.createElement("div", { style: { fontSize: "10px", color: "#aaa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, ach.description))),
       /* @__PURE__ */ React.createElement("div", null, isUnlocked ? /* @__PURE__ */ React.createElement(CheckCircleIcon, { color: "#10b981" }) : /* @__PURE__ */ React.createElement(LockIcon, { color: "#666" }))
     );
-  })))));
+  }))))), /* @__PURE__ */ React.createElement(PanelSection, { title: "Plugin Self-Updater" }, /* @__PURE__ */ React.createElement(PanelSectionRow, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", fontSize: "12px", padding: "4px 0" } }, /* @__PURE__ */ React.createElement("span", { style: { color: "#aaa" } }, "Installed Version:"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: "bold", background: "rgba(255,255,255,0.1)", padding: "2px 8px", borderRadius: "10px" } }, "v", currentVersion))), /* @__PURE__ */ React.createElement(PanelSectionRow, null, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: "4px", width: "100%" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: "11px", color: "#888" } }, "Update Channel:"), /* @__PURE__ */ React.createElement(
+    "select",
+    {
+      style: { padding: "6px 8px", borderRadius: "6px", background: "#222", color: "#fff", fontSize: "12px" },
+      value: updateSource,
+      onChange: (e) => setUpdateSource(e.target.value)
+    },
+    /* @__PURE__ */ React.createElement("option", { value: "auto" }, "Auto (Server with GitHub fallback)"),
+    /* @__PURE__ */ React.createElement("option", { value: "server" }, "Local OmniAchievements Server"),
+    /* @__PURE__ */ React.createElement("option", { value: "github" }, "GitHub Repo (santx1/OmniAchievements)")
+  ))), /* @__PURE__ */ React.createElement(PanelSectionRow, null, /* @__PURE__ */ React.createElement(
+    ButtonItem,
+    {
+      layout: "below",
+      onClick: () => handleCheckUpdate(),
+      disabled: isCheckingUpdate || isApplyingUpdate
+    },
+    isCheckingUpdate ? "Checking for updates..." : "Check for Updates"
+  )), updateStatusMsg && /* @__PURE__ */ React.createElement(PanelSectionRow, null, /* @__PURE__ */ React.createElement(
+    "div",
+    {
+      style: {
+        fontSize: "11px",
+        padding: "8px 10px",
+        borderRadius: "6px",
+        backgroundColor: updateSuccess ? "rgba(16, 185, 129, 0.15)" : updateAvailable ? "rgba(245, 158, 11, 0.15)" : "rgba(255, 255, 255, 0.05)",
+        border: updateSuccess ? "1px solid rgba(16, 185, 129, 0.4)" : updateAvailable ? "1px solid rgba(245, 158, 11, 0.4)" : "1px solid rgba(255, 255, 255, 0.1)",
+        color: updateSuccess ? "#34d399" : updateAvailable ? "#fbbf24" : "#ccc",
+        width: "100%",
+        wordBreak: "break-word"
+      }
+    },
+    updateStatusMsg
+  )), updateAvailable && !updateSuccess && /* @__PURE__ */ React.createElement(PanelSectionRow, null, /* @__PURE__ */ React.createElement(
+    ButtonItem,
+    {
+      layout: "below",
+      onClick: handleApplyUpdate,
+      disabled: isApplyingUpdate
+    },
+    isApplyingUpdate ? "Updating Plugin Files..." : `Update to v${latestVersion} Now`
+  )), updateSuccess && /* @__PURE__ */ React.createElement(PanelSectionRow, null, /* @__PURE__ */ React.createElement(ButtonItem, { layout: "below", onClick: handleReloadDecky }, "Reload Decky Now"))));
 };
 var index_default = definePlugin((serverApi) => {
   return {
