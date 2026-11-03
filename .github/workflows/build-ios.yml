@@ -61,9 +61,13 @@ jobs:
       - name: Package Unsigned Sideloadable IPA
         run: |
           cd client/ios/App
+          rm -rf Payload OmniAchievements.ipa
           mkdir -p Payload
-          cp -r ./build-output/Build/Products/Release-iphoneos/App.app Payload/
-          zip -r -9 OmniAchievements.ipa Payload
+          cp -R ./build-output/Build/Products/Release-iphoneos/App.app Payload/
+          # -y preserves symbolic links in frameworks, preventing "Bad message" extraction errors
+          zip -qry -9 OmniAchievements.ipa Payload
+          # Verify integrity
+          unzip -t OmniAchievements.ipa
           ls -lh OmniAchievements.ipa
 
       - name: Upload IPA Artifact
@@ -73,3 +77,4 @@ jobs:
           path: client/ios/App/OmniAchievements.ipa
           if-no-files-found: error
           retention-days: 30
+          compression-level: 0

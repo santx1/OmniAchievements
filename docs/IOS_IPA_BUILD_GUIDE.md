@@ -17,7 +17,17 @@ You don't need a Mac or complex developer tools. GitHub provides free macOS virt
 4. Click the **Run workflow** button on the right and select the `main` branch.
 5. Wait ~3 to 4 minutes for the workflow to complete.
 6. Click on the completed workflow run, scroll down to **Artifacts**, and download `OmniAchievements-iOS-IPA.zip`.
-7. Unzip the file to get your compiled `OmniAchievements.ipa`!
+7. Unzip `OmniAchievements-iOS-IPA.zip` to extract the `OmniAchievements.ipa` file!
+
+> [!IMPORTANT]
+> **DO NOT tap to decompress `OmniAchievements.ipa`!**
+> On iOS and iPadOS, the Files app treats `.ipa` files like zip archives. If you tap on `OmniAchievements.ipa`, iOS will attempt to extract it and show an error: *"The operation couldn't be completed. Bad message"*!
+> The `.ipa` is an app package. Instead of tapping it, open your sideloading app (SideStore, AltStore, TrollStore) and select the `.ipa` from the app's **"+"** or **Import** button.
+
+### ⚠️ Troubleshooting: "Bad message" when uncompressing `OmniAchievements-iOS-IPA.zip`
+If you see *"The operation couldn't be completed. Bad message"* when unzipping `OmniAchievements-iOS-IPA.zip`:
+1. **Incomplete Download in Safari**: Downloading large files from GitHub in mobile Safari can get interrupted if the app is put in the background. Keep Safari open until the blue download progress circle finishes completely.
+2. **Use a Robust Extractor**: If the default iOS Files app struggles, open the zip file using [Documents by Readdle](https://apps.apple.com/app/documents-file-reader-browser/id364901807) (free) or extract it on your computer with 7-Zip or The Unarchiver.
 
 ---
 
