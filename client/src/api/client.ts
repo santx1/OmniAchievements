@@ -362,6 +362,33 @@ class ApiClient {
       body: JSON.stringify(data)
     });
   }
+
+  // AI Achievement Generator
+  async generateAiAchievements(params: {
+    gameTitle: string;
+    platform?: string;
+    genre?: string;
+    count?: number;
+    difficulty?: 'casual' | 'balanced' | 'hardcore';
+    style?: 'canonical' | 'witty' | 'speedrun' | 'lore';
+    apiKey?: string;
+  }): Promise<{ pack: any }> {
+    return this.request('/ai/generate', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
+  }
+
+  async applyAiAchievements(gameId: string, achievements: any[], replaceExisting: boolean = false): Promise<any> {
+    return this.request('/ai/apply', {
+      method: 'POST',
+      body: JSON.stringify({ gameId, achievements, replaceExisting })
+    });
+  }
+
+  async exportAiAchievements(gameId: string): Promise<any> {
+    return this.request(`/ai/export/${gameId}`);
+  }
 }
 
 export const api = new ApiClient();

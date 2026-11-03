@@ -22,6 +22,7 @@ interface StoredConfig {
   masterPassword?: string;
   steamApiKey?: string;
   steamGridDbApiKey?: string;
+  geminiApiKey?: string;
   jwtSecret?: string;
 }
 
@@ -59,6 +60,7 @@ export const config = {
   masterPassword: process.env.MASTER_PASSWORD || storedConfig.masterPassword || 'changeme123',
   steamApiKey: process.env.STEAM_API_KEY || storedConfig.steamApiKey || '',
   steamGridDbApiKey: process.env.STEAMGRIDDB_API_KEY || storedConfig.steamGridDbApiKey || '',
+  geminiApiKey: process.env.GEMINI_API_KEY || storedConfig.geminiApiKey || '',
   jwtSecret: process.env.JWT_SECRET || storedConfig.jwtSecret || 'omni_achievements_secure_jwt_secret_9948271',
   isProduction: process.env.NODE_ENV === 'production',
   
@@ -72,6 +74,9 @@ export const config = {
     }
     if (updates.steamGridDbApiKey !== undefined) {
       this.steamGridDbApiKey = updates.steamGridDbApiKey;
+    }
+    if (updates.geminiApiKey !== undefined) {
+      this.geminiApiKey = updates.geminiApiKey;
     }
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(storedConfig, null, 2));
   }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Game, Achievement, GameStatus } from '../../types/index.js';
 import { api } from '../../api/client.js';
 import confetti from 'canvas-confetti';
+import { AiAchievementModal } from '../achievements/AiAchievementModal.js';
 import {
   X,
   Trophy,
@@ -78,6 +79,9 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
   const [customCoverInput, setCustomCoverInput] = useState('');
   const [customHeroInput, setCustomHeroInput] = useState('');
   const [isSavingArtwork, setIsSavingArtwork] = useState(false);
+
+  // AI Achievement Generator state
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen && gameId) {
@@ -448,7 +452,17 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
               </div>
 
               {/* Actions */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setIsAiModalOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600/30 to-purple-600/30 hover:from-indigo-600/40 hover:to-purple-600/40 border border-indigo-500/40 text-xs font-semibold text-indigo-300 flex items-center gap-1.5 transition-colors shadow-sm"
+                  title="Generate canon achievements & vector badges with Google Gemini AI"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>AI Achievements</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleOpenArtworkPicker}
@@ -1067,6 +1081,21 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* AI Achievement Generator Modal */}
+      {isAiModalOpen && game && (
+        <AiAchievementModal
+          isOpen={isAiModalOpen}
+          onClose={() => setIsAiModalOpen(false)}
+          gameId={game.id}
+          gameTitle={game.title}
+          platform={game.platform}
+          onAchievementsApplied={async () => {
+            await loadGameDetails(game.id);
+            onGameUpdated();
+          }}
+        />
       )}
     </div>
   );

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../api/client.js';
 import { Platform, GameStatus, CustomPlatform } from '../../types/index.js';
+import { AiAchievementModal } from '../achievements/AiAchievementModal.js';
 import {
   X,
   Search,
@@ -62,6 +63,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   const [isFetchingSteamSchema, setIsFetchingSteamSchema] = useState(false);
   const [fetchedAchievements, setFetchedAchievements] = useState<any[]>([]);
   const [steamFetchMessage, setSteamFetchMessage] = useState<string | null>(null);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -393,6 +395,22 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
             {steamFetchMessage && (
               <p className="text-xs font-semibold text-cyan-300 mt-2">{steamFetchMessage}</p>
             )}
+
+            {/* AI Generator Option */}
+            <div className="pt-2.5 mt-2.5 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => setIsAiModalOpen(true)}
+                className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-indigo-600/25 via-purple-600/25 to-pink-600/25 hover:from-indigo-600/35 hover:to-purple-600/35 border border-indigo-500/40 text-xs font-bold text-indigo-300 flex items-center justify-center gap-2 transition-all shadow-sm"
+              >
+                <Sparkles className="w-4 h-4 text-indigo-400" />
+                <span>
+                  {fetchedAchievements.length > 0
+                    ? `✓ ${fetchedAchievements.length} Achievements Attached (Click to edit/regenerate with AI)`
+                    : '✨ Generate Canon Achievements with AI / Import .json'}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Status & Playtime */}
@@ -441,6 +459,28 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           </div>
         </form>
       </div>
+
+      {/* AI Achievement Generator Modal */}
+      {isAiModalOpen && (
+        <AiAchievementModal
+          isOpen={isAiModalOpen}
+          onClose={() => setIsAiModalOpen(false)}
+          gameTitle={title}
+          platform={platform}
+          onAchievementsGenerated={(achs) => {
+            setFetchedAchievements(
+              achs.map((a) => ({
+                api_name: a.apiName,
+                display_name: a.displayName,
+                description: a.description,
+                icon_unlocked: a.iconUnlocked,
+                icon_locked: a.iconLocked
+              }))
+            );
+            setSteamFetchMessage(`✓ Attached ${achs.length} AI generated achievements with custom vector badges!`);
+          }}
+        />
+      )}
     </div>
   );
 };

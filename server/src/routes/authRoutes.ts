@@ -60,6 +60,8 @@ router.get('/settings', masterAuth, (req: Request, res: Response) => {
     steamApiKeyMasked: config.steamApiKey ? `${config.steamApiKey.substring(0, 4)}...${config.steamApiKey.slice(-4)}` : '',
     hasSteamGridDbApiKey: !!config.steamGridDbApiKey,
     steamGridDbApiKeyMasked: config.steamGridDbApiKey ? `${config.steamGridDbApiKey.substring(0, 4)}...${config.steamGridDbApiKey.slice(-4)}` : '',
+    hasGeminiApiKey: !!config.geminiApiKey,
+    geminiApiKeyMasked: config.geminiApiKey ? `${config.geminiApiKey.substring(0, 4)}...${config.geminiApiKey.slice(-4)}` : '',
     port: config.port,
     isProduction: config.isProduction
   });
@@ -69,7 +71,7 @@ router.get('/settings', masterAuth, (req: Request, res: Response) => {
  * Update system keys or master password
  */
 router.post('/settings', masterAuth, (req: Request, res: Response) => {
-  const { masterPassword, steamApiKey, steamGridDbApiKey } = req.body;
+  const { masterPassword, steamApiKey, steamGridDbApiKey, geminiApiKey } = req.body;
 
   const updates: any = {};
   if (masterPassword && masterPassword.trim().length >= 6) {
@@ -80,6 +82,9 @@ router.post('/settings', masterAuth, (req: Request, res: Response) => {
   }
   if (steamGridDbApiKey !== undefined) {
     updates.steamGridDbApiKey = steamGridDbApiKey.trim();
+  }
+  if (geminiApiKey !== undefined) {
+    updates.geminiApiKey = geminiApiKey.trim();
   }
 
   config.updateConfig(updates);
