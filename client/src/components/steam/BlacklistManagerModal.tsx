@@ -43,7 +43,7 @@ export const BlacklistManagerModal: React.FC<BlacklistManagerModalProps> = ({ is
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xl">
-      <div className="w-full max-w-lg rounded-3xl glass border border-slate-700/60 shadow-2xl p-6 relative max-h-[85vh] flex flex-col">
+      <div className="w-full max-w-lg rounded-3xl glass-dark border border-slate-700/60 shadow-2xl p-6 relative max-h-[85vh] flex flex-col">
         <div className="flex justify-between items-center mb-4 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">

@@ -19,7 +19,7 @@ router.get('/', (req: AuthenticatedProfileRequest, res: Response) => {
   let query = `
     SELECT 
       id, profile_id, title, platform, external_id, cover_image, banner_image,
-      hero_image, icon_image, status, is_custom, playtime_minutes,
+      hero_image, icon_image, status, is_custom, is_family_shared, family_owner, playtime_minutes,
       total_achievements, unlocked_achievements, user_rating, notes,
       last_played_at, created_at, updated_at
     FROM games
@@ -102,6 +102,8 @@ router.post('/', (req: AuthenticatedProfileRequest, res: Response) => {
     hero_image,
     icon_image,
     status,
+    is_family_shared,
+    family_owner,
     playtime_minutes,
     user_rating,
     notes,
@@ -119,9 +121,9 @@ router.post('/', (req: AuthenticatedProfileRequest, res: Response) => {
   db.prepare(`
     INSERT INTO games (
       id, profile_id, title, platform, external_id, cover_image, banner_image, hero_image, icon_image,
-      status, is_custom, playtime_minutes, total_achievements, unlocked_achievements, user_rating, notes,
+      status, is_custom, is_family_shared, family_owner, playtime_minutes, total_achievements, unlocked_achievements, user_rating, notes,
       created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 0, 0, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, 0, 0, ?, ?, ?, ?)
   `).run(
     id,
     profileId,
@@ -133,6 +135,8 @@ router.post('/', (req: AuthenticatedProfileRequest, res: Response) => {
     hero_image || '',
     icon_image || '',
     validStatus,
+    is_family_shared ? 1 : 0,
+    family_owner || '',
     playtime_minutes || 0,
     user_rating || 0,
     notes || '',
@@ -211,6 +215,8 @@ router.put('/:id', (req: AuthenticatedProfileRequest, res: Response) => {
     hero_image,
     icon_image,
     status,
+    is_family_shared,
+    family_owner,
     playtime_minutes,
     user_rating,
     notes
@@ -238,6 +244,8 @@ router.put('/:id', (req: AuthenticatedProfileRequest, res: Response) => {
       hero_image = COALESCE(?, hero_image),
       icon_image = COALESCE(?, icon_image),
       status = ?,
+      is_family_shared = COALESCE(?, is_family_shared),
+      family_owner = COALESCE(?, family_owner),
       playtime_minutes = COALESCE(?, playtime_minutes),
       user_rating = COALESCE(?, user_rating),
       notes = COALESCE(?, notes),
@@ -252,6 +260,8 @@ router.put('/:id', (req: AuthenticatedProfileRequest, res: Response) => {
     hero_image,
     icon_image,
     validStatus,
+    is_family_shared,
+    family_owner,
     playtime_minutes,
     user_rating,
     notes,

@@ -16,17 +16,13 @@ import {
   Copy,
   CheckCheck,
   ExternalLink,
-  Laptop
+  Laptop,
+  Tag,
+  Trash2,
+  Edit3,
+  Plus
 } from 'lucide-react';
-
-const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80'
-];
+import { NEUTRAL_AVATARS, getAvatarUrl, DEFAULT_AVATAR } from '../../utils/avatars.js';
 
 export const SettingsView: React.FC = () => {
   const { activeProfile, refreshActiveProfile } = useAuth();
@@ -34,7 +30,7 @@ export const SettingsView: React.FC = () => {
 
   // Profile fields
   const [name, setName] = useState(activeProfile?.name || '');
-  const [avatar, setAvatar] = useState(activeProfile?.avatar || PRESET_AVATARS[0]);
+  const [avatar, setAvatar] = useState(getAvatarUrl(activeProfile?.avatar) || DEFAULT_AVATAR);
   const [steamId, setSteamId] = useState(activeProfile?.steam_id || '');
   const [retroUsername, setRetroUsername] = useState(activeProfile?.retro_username || '');
   const [retroApiKey, setRetroApiKey] = useState(activeProfile?.retro_api_key || '');
@@ -54,6 +50,16 @@ export const SettingsView: React.FC = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [backupMsg, setBackupMsg] = useState<string | null>(null);
 
+  // Custom Console & Platform Tags
+  const [platforms, setPlatforms] = useState<any[]>([]);
+  const [isLoadingPlatforms, setIsLoadingPlatforms] = useState(true);
+  const [newPlatformName, setNewPlatformName] = useState('');
+  const [newPlatformColor, setNewPlatformColor] = useState('#3b82f6');
+  const [editingPlatformId, setEditingPlatformId] = useState<string | null>(null);
+  const [editingPlatformName, setEditingPlatformName] = useState('');
+  const [editingPlatformColor, setEditingPlatformColor] = useState('#3b82f6');
+  const [platformMsg, setPlatformMsg] = useState<string | null>(null);
+
   // Server settings fields
   const [serverSettings, setServerSettings] = useState<any | null>(null);
   const [masterPasswordInput, setMasterPasswordInput] = useState('');
@@ -69,7 +75,68 @@ export const SettingsView: React.FC = () => {
 
   useEffect(() => {
     loadServerSettings();
+    loadPlatforms();
   }, []);
+
+  const loadPlatforms = async () => {
+    setIsLoadingPlatforms(true);
+    try {
+      const res = await api.getPlatforms();
+      setPlatforms(res.platforms || []);
+    } catch (err) {
+      console.warn('Failed to load platforms', err);
+    } finally {
+      setIsLoadingPlatforms(false);
+    }
+  };
+
+  const handleAddPlatform = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPlatformName.trim()) return;
+    setPlatformMsg(null);
+    try {
+      const res = await api.createPlatform({
+        name: newPlatformName.trim(),
+        color: newPlatformColor
+      });
+      setPlatforms((prev) => [...prev, res.platform]);
+      setNewPlatformName('');
+      setPlatformMsg('✓ New console tag added successfully!');
+    } catch (err: any) {
+      setPlatformMsg(`✕ Failed: ${err.message}`);
+    }
+  };
+
+  const handleStartEditPlatform = (p: any) => {
+    setEditingPlatformId(p.id);
+    setEditingPlatformName(p.name);
+    setEditingPlatformColor(p.color);
+  };
+
+  const handleSaveEditPlatform = async () => {
+    if (!editingPlatformId || !editingPlatformName.trim()) return;
+    try {
+      const res = await api.updatePlatform(editingPlatformId, {
+        name: editingPlatformName.trim(),
+        color: editingPlatformColor
+      });
+      setPlatforms((prev) => prev.map((p) => p.id === editingPlatformId ? res.platform : p));
+      setEditingPlatformId(null);
+      setPlatformMsg('✓ Console tag updated!');
+    } catch (err: any) {
+      setPlatformMsg(`✕ Update failed: ${err.message}`);
+    }
+  };
+
+  const handleDeletePlatform = async (id: string) => {
+    try {
+      await api.deletePlatform(id);
+      setPlatforms((prev) => prev.filter((p) => p.id !== id));
+      setPlatformMsg('✓ Console tag deleted.');
+    } catch (err: any) {
+      setPlatformMsg(`✕ Delete failed: ${err.message}`);
+    }
+  };
 
   const loadServerSettings = async () => {
     try {
@@ -275,20 +342,22 @@ export const SettingsView: React.FC = () => {
           {/* Avatar Chooser */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
-              Profile Avatar
+              Color Silhouette Avatar
             </label>
-            <div className="grid grid-cols-6 gap-2 mb-2">
-              {PRESET_AVATARS.map((p, idx) => (
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-2">
+              {NEUTRAL_AVATARS.map((p) => (
                 <button
-                  key={idx}
+                  key={p.id}
                   type="button"
-                  onClick={() => setAvatar(p)}
-                  className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all ${
-                    avatar === p ? 'border-indigo-500 scale-105 shadow-glow' : 'border-transparent opacity-70 hover:opacity-100'
+                  onClick={() => setAvatar(p.dataUri)}
+                  className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all p-1 ${
+                    avatar === p.dataUri ? 'border-indigo-500 scale-105 shadow-glow' : 'border-transparent opacity-80 hover:opacity-100'
                   }`}
+                  style={{ backgroundColor: p.bg }}
+                  title={p.name}
                 >
-                  <img src={p} alt="Preset avatar" className="w-full h-full object-cover" />
-                  {avatar === p && (
+                  <img src={p.dataUri} alt={p.name} className="w-full h-full object-contain" />
+                  {avatar === p.dataUri && (
                     <div className="absolute inset-0 bg-indigo-600/30 flex items-center justify-center">
                       <Check className="w-4 h-4 text-white" />
                     </div>
@@ -296,13 +365,6 @@ export const SettingsView: React.FC = () => {
                 </button>
               ))}
             </div>
-            <input
-              type="url"
-              value={avatar}
-              onChange={(e) => setAvatar(e.target.value)}
-              placeholder="Or custom avatar URL..."
-              className="w-full px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
-            />
           </div>
 
           {/* Theme & Accent Customizer */}
@@ -417,6 +479,135 @@ export const SettingsView: React.FC = () => {
             <Save className="w-3.5 h-3.5" />
             <span>{isUpdatingProfile ? 'Saving...' : 'Save Profile Changes'}</span>
           </button>
+        </form>
+      </div>
+
+      {/* 2. Custom Console & Platform Tags Manager */}
+      <div className="p-6 rounded-3xl glass dark:glass border border-slate-200/50 dark:border-slate-800/80 shadow-sm space-y-5">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500">
+            <Tag className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-slate-900 dark:text-white">
+              Console & Platform Tags
+            </h3>
+            <p className="text-xs text-slate-400">
+              Customize console names, add new platforms (e.g. PS5, Nintendo 3DS, PS Vita), and assign custom colors
+            </p>
+          </div>
+        </div>
+
+        {/* Existing Platform Tags List */}
+        <div className="space-y-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block mb-1">
+            Active Consoles & Platforms:
+          </span>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+            {platforms.map((p) => {
+              const isEditing = editingPlatformId === p.id;
+              return (
+                <div
+                  key={p.id}
+                  className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2"
+                >
+                  {isEditing ? (
+                    <div className="flex items-center gap-2 flex-grow min-w-0">
+                      <input
+                        type="color"
+                        value={editingPlatformColor}
+                        onChange={(e) => setEditingPlatformColor(e.target.value)}
+                        className="w-7 h-7 rounded-lg border-0 cursor-pointer p-0 bg-transparent shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={editingPlatformName}
+                        onChange={(e) => setEditingPlatformName(e.target.value)}
+                        className="flex-grow px-2 py-1 rounded-lg bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveEditPlatform}
+                        className="p-1 rounded-lg bg-indigo-600 text-white text-xs font-bold shrink-0"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm"
+                          style={{ backgroundColor: p.color }}
+                        />
+                        <span className="font-semibold text-xs text-slate-800 dark:text-slate-200 truncate">
+                          {p.name}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditPlatform(p)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+                          title="Edit console tag"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeletePlatform(p.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"
+                          title="Delete console tag"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Add New Console Tag Form */}
+        <form onSubmit={handleAddPlatform} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+            Add New Console / Platform:
+          </span>
+          <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center">
+            <div className="flex items-center gap-2 shrink-0">
+              <label className="text-[11px] text-slate-500">Tag Color:</label>
+              <input
+                type="color"
+                value={newPlatformColor}
+                onChange={(e) => setNewPlatformColor(e.target.value)}
+                className="w-8 h-8 rounded-xl border border-slate-300 dark:border-slate-700 cursor-pointer p-0.5 bg-white dark:bg-slate-950"
+              />
+            </div>
+            <input
+              type="text"
+              value={newPlatformName}
+              onChange={(e) => setNewPlatformName(e.target.value)}
+              placeholder="e.g. PlayStation 5, Nintendo 3DS, PS Vita, Emulators..."
+              className="flex-grow px-3 py-2 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400"
+            />
+            <button
+              type="submit"
+              disabled={!newPlatformName.trim()}
+              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shrink-0 disabled:opacity-50"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Console Tag</span>
+            </button>
+          </div>
+          {platformMsg && (
+            <p className={`text-xs font-semibold ${platformMsg.startsWith('✓') ? 'text-emerald-500' : 'text-rose-500'}`}>
+              {platformMsg}
+            </p>
+          )}
         </form>
       </div>
 

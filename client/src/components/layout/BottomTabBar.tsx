@@ -17,7 +17,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
   onOpenSteamSync
 }) => {
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass dark:glass border-t border-slate-200/50 dark:border-slate-800/80 pb-safe transition-colors">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 glass border-t border-slate-200/80 dark:border-slate-800/80 pb-safe transition-colors">
       <div className="flex items-center justify-around h-16 px-2">
         {/* Library */}
         <button

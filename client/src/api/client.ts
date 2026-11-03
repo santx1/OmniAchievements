@@ -1,4 +1,4 @@
-import { Game, Achievement, Profile, StatsData, BlacklistItem, Platform, GameStatus } from '../types/index.js';
+import { Game, Achievement, Profile, StatsData, BlacklistItem, Platform, GameStatus, CustomPlatform } from '../types/index.js';
 
 const DEFAULT_API_BASE = '/api';
 
@@ -192,6 +192,8 @@ class ApiClient {
     hero_image?: string;
     icon_image?: string;
     status?: GameStatus;
+    is_family_shared?: number;
+    family_owner?: string;
     playtime_minutes?: number;
     user_rating?: number;
     notes?: string;
@@ -321,6 +323,31 @@ class ApiClient {
     return this.request('/retro/sync', {
       method: 'POST',
       body: JSON.stringify({ gameId, retroGameId })
+    });
+  }
+
+  // Custom Console / Platform Tags
+  async getPlatforms(): Promise<{ platforms: CustomPlatform[] }> {
+    return this.request('/platforms');
+  }
+
+  async createPlatform(data: { name: string; color: string; id?: string }): Promise<{ platform: CustomPlatform }> {
+    return this.request('/platforms', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async updatePlatform(id: string, data: Partial<CustomPlatform>): Promise<{ platform: CustomPlatform }> {
+    return this.request(`/platforms/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deletePlatform(id: string): Promise<{ success: boolean }> {
+    return this.request(`/platforms/${id}`, {
+      method: 'DELETE'
     });
   }
 

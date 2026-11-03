@@ -5,15 +5,7 @@ import { Profile } from '../../types/index.js';
 import { api } from '../../api/client.js';
 import { Users, Plus, Shield, Sparkles, X, Check, Palette } from 'lucide-react';
 import { ACCENT_PRESETS } from '../../context/ThemeContext.js';
-
-const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80'
-];
+import { NEUTRAL_AVATARS, getAvatarUrl, DEFAULT_AVATAR } from '../../utils/avatars.js';
 
 export const ProfileSelector: React.FC = () => {
   const { profiles, selectProfileWithPin, loadProfiles } = useAuth();
@@ -23,7 +15,7 @@ export const ProfileSelector: React.FC = () => {
 
   // New Profile Form
   const [newName, setNewName] = useState('');
-  const [newAvatar, setNewAvatar] = useState(PRESET_AVATARS[0]);
+  const [newAvatar, setNewAvatar] = useState(DEFAULT_AVATAR);
   const [newPin, setNewPin] = useState('');
   const [newTheme, setNewTheme] = useState<'dark' | 'light' | 'system'>('dark');
   const [newAccent, setNewAccent] = useState('#6366f1');
@@ -115,12 +107,9 @@ export const ProfileSelector: React.FC = () => {
             {/* Avatar container */}
             <div className="relative mb-4">
               <img
-                src={profile.avatar}
+                src={getAvatarUrl(profile.avatar)}
                 alt={profile.name}
                 className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl object-cover shadow-lg border-2 border-slate-700 group-hover:border-indigo-500 transition-colors"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = PRESET_AVATARS[0];
-                }}
               />
               <div className="absolute -bottom-2 -right-2 p-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 shadow group-hover:text-indigo-400 transition-colors">
                 <Shield className="w-4 h-4" />
@@ -167,7 +156,7 @@ export const ProfileSelector: React.FC = () => {
       {/* Create Profile Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
-          <div className="w-full max-w-md p-6 rounded-3xl glass border border-slate-700/60 shadow-2xl relative my-8">
+          <div className="w-full max-w-md p-6 rounded-3xl glass-dark border border-slate-700/60 shadow-2xl relative my-8">
             <div className="flex justify-between items-center mb-5">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
@@ -201,22 +190,24 @@ export const ProfileSelector: React.FC = () => {
               {/* Avatar Selection */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                  Choose Avatar
+                  Choose Color Avatar
                 </label>
-                <div className="grid grid-cols-6 gap-2 mb-2">
-                  {PRESET_AVATARS.map((avatarUrl, idx) => (
+                <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-2">
+                  {NEUTRAL_AVATARS.map((av) => (
                     <button
-                      key={idx}
+                      key={av.id}
                       type="button"
-                      onClick={() => setNewAvatar(avatarUrl)}
-                      className={`relative rounded-xl overflow-hidden border-2 transition-all ${
-                        newAvatar === avatarUrl
+                      onClick={() => setNewAvatar(av.dataUri)}
+                      className={`relative rounded-xl overflow-hidden border-2 transition-all p-1 ${
+                        newAvatar === av.dataUri
                           ? 'border-indigo-500 scale-105 shadow-glow'
-                          : 'border-transparent opacity-70 hover:opacity-100'
+                          : 'border-transparent opacity-80 hover:opacity-100'
                       }`}
+                      style={{ backgroundColor: av.bg }}
+                      title={av.name}
                     >
-                      <img src={avatarUrl} alt="Preset avatar" className="w-full h-12 object-cover" />
-                      {newAvatar === avatarUrl && (
+                      <img src={av.dataUri} alt={av.name} className="w-full h-10 object-contain" />
+                      {newAvatar === av.dataUri && (
                         <div className="absolute inset-0 bg-indigo-600/30 flex items-center justify-center">
                           <Check className="w-4 h-4 text-white" />
                         </div>
@@ -224,13 +215,6 @@ export const ProfileSelector: React.FC = () => {
                     </button>
                   ))}
                 </div>
-                <input
-                  type="url"
-                  value={newAvatar}
-                  onChange={(e) => setNewAvatar(e.target.value)}
-                  placeholder="Or paste custom image URL..."
-                  className="w-full px-3 py-1.5 rounded-lg bg-slate-900/60 border border-slate-800 text-slate-300 placeholder-slate-600 text-xs focus:outline-none focus:border-indigo-500"
-                />
               </div>
 
               {/* 6-Digit PIN Setter */}

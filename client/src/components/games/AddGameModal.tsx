@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../../api/client.js';
-import { Platform, GameStatus } from '../../types/index.js';
+import { Platform, GameStatus, CustomPlatform } from '../../types/index.js';
 import {
   X,
   Search,
@@ -10,7 +10,8 @@ import {
   Check,
   Plus,
   Gamepad2,
-  Sparkles
+  Sparkles,
+  Users
 } from 'lucide-react';
 
 interface AddGameModalProps {
@@ -26,13 +27,28 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [platform, setPlatform] = useState<Platform>('playstation');
+  const [customPlatforms, setCustomPlatforms] = useState<CustomPlatform[]>([]);
   const [status, setStatus] = useState<GameStatus>('unplayed');
+  const [isFamilyShared, setIsFamilyShared] = useState(false);
+  const [familyOwner, setFamilyOwner] = useState('');
   const [playtimeHours, setPlaytimeHours] = useState('0');
 
   // Media
   const [coverImage, setCoverImage] = useState('');
   const [bannerImage, setBannerImage] = useState('');
   const [heroImage, setHeroImage] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      api.getPlatforms().then((res) => {
+        const plats = res.platforms || [];
+        setCustomPlatforms(plats);
+        if (plats.length > 0 && !plats.some((p) => p.id === platform)) {
+          setPlatform(plats[0].id);
+        }
+      }).catch(() => {});
+    }
+  }, [isOpen]);
 
   // SteamGridDB search
   const [isSearchingGrid, setIsSearchingGrid] = useState(false);
@@ -145,6 +161,8 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
         banner_image: bannerImage || heroImage,
         hero_image: heroImage,
         status,
+        is_family_shared: isFamilyShared ? 1 : 0,
+        family_owner: isFamilyShared ? (familyOwner.trim() || 'Family Member') : '',
         playtime_minutes: playtimeMinutes,
         initialAchievements: fetchedAchievements
       });
@@ -160,7 +178,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-xl overflow-y-auto">
-      <div className="w-full max-w-2xl rounded-3xl glass border border-slate-700/60 shadow-2xl p-6 relative my-auto max-h-[92vh] overflow-y-auto">
+      <div className="w-full max-w-2xl rounded-3xl glass-dark border border-slate-700/60 shadow-2xl p-6 relative my-auto max-h-[92vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-2xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center border border-indigo-500/30">
@@ -183,33 +201,51 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           {/* Platform Selector */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-              Platform / Console
+              Platform / Console Tag
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {[
-                { id: 'playstation', label: 'PlayStation', color: 'border-blue-500/40 text-blue-400' },
-                { id: 'switch', label: 'Nintendo Switch', color: 'border-red-500/40 text-red-400' },
-                { id: 'xbox', label: 'Xbox', color: 'border-emerald-500/40 text-emerald-400' },
-                { id: 'retro', label: 'RetroArch / Emu', color: 'border-purple-500/40 text-purple-400' },
-                { id: 'steam', label: 'Steam', color: 'border-cyan-500/40 text-cyan-400' },
-                { id: 'epic', label: 'Epic Games', color: 'border-amber-500/40 text-amber-400' },
-                { id: 'gog', label: 'GOG', color: 'border-fuchsia-500/40 text-fuchsia-400' },
-                { id: 'other', label: 'Other / Custom', color: 'border-slate-500/40 text-slate-300' }
-              ].map((p) => (
+              {customPlatforms.map((p) => (
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => setPlatform(p.id as Platform)}
-                  className={`py-2 px-3 rounded-xl border text-xs font-semibold text-center transition-all ${
+                  onClick={() => setPlatform(p.id)}
+                  className={`py-2 px-3 rounded-xl border text-xs font-semibold text-center transition-all flex items-center justify-center gap-1.5 ${
                     platform === p.id
                       ? `bg-slate-800 ring-2 ring-indigo-500 text-white shadow-md`
                       : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white'
                   }`}
                 >
-                  {p.label}
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                  <span className="truncate">{p.name}</span>
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Family Sharing Checkbox */}
+          <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/20 flex flex-wrap items-center justify-between gap-3">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-purple-300">
+              <input
+                type="checkbox"
+                checked={isFamilyShared}
+                onChange={(e) => setIsFamilyShared(e.target.checked)}
+                className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 bg-slate-900 border-slate-700"
+              />
+              <span className="flex items-center gap-1">
+                <Users className="w-3.5 h-3.5 text-purple-400" />
+                <span>Mark as Family Shared Game</span>
+              </span>
+            </label>
+
+            {isFamilyShared && (
+              <input
+                type="text"
+                value={familyOwner}
+                onChange={(e) => setFamilyOwner(e.target.value)}
+                placeholder="Owner name (e.g. Dad, Brother)..."
+                className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 w-48"
+              />
+            )}
           </div>
 
           {/* Title and SteamGridDB Search */}

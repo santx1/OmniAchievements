@@ -14,8 +14,10 @@ import {
   List,
   SlidersHorizontal,
   Sparkles,
-  Clock
+  Clock,
+  Users
 } from 'lucide-react';
+import { CustomPlatform } from '../../types/index.js';
 
 interface LibraryViewProps {
   onOpenAddGame: () => void;
@@ -27,6 +29,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onOpenSteamSync
 }) => {
   const [games, setGames] = useState<Game[]>([]);
+  const [customPlatforms, setCustomPlatforms] = useState<CustomPlatform[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters & Sorting
@@ -40,19 +43,35 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
   useEffect(() => {
+    loadPlatforms();
+  }, []);
+
+  const loadPlatforms = async () => {
+    try {
+      const res = await api.getPlatforms();
+      setCustomPlatforms(res.platforms || []);
+    } catch (e) {}
+  };
+
+  useEffect(() => {
     loadGames();
   }, [platform, status, sort]);
 
   const loadGames = async () => {
     setIsLoading(true);
     try {
+      const isFamilyFilter = platform === 'family_shared';
       const res = await api.getGames({
-        platform,
+        platform: isFamilyFilter ? undefined : platform,
         status,
         search,
         sort
       });
-      setGames(res.games || []);
+      let resultGames = res.games || [];
+      if (isFamilyFilter) {
+        resultGames = resultGames.filter((g) => g.is_family_shared === 1);
+      }
+      setGames(resultGames);
     } catch (err) {
       console.error('Failed to load games:', err);
     } finally {
@@ -125,27 +144,42 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       <div className="space-y-3">
         {/* Platform Horizontal Scrollable Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {[
-            { id: 'all', label: 'All Platforms' },
-            { id: 'steam', label: 'Steam' },
-            { id: 'playstation', label: 'PlayStation' },
-            { id: 'switch', label: 'Nintendo Switch' },
-            { id: 'xbox', label: 'Xbox' },
-            { id: 'retro', label: 'Retro / Emulators' },
-            { id: 'epic', label: 'Epic Games' },
-            { id: 'gog', label: 'GOG' },
-            { id: 'other', label: 'Custom' }
-          ].map((tab) => (
+          <button
+            onClick={() => setPlatform('all')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              platform === 'all'
+                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white'
+            }`}
+          >
+            All Platforms
+          </button>
+
+          {/* Family Shared Filter Pill */}
+          <button
+            onClick={() => setPlatform('family_shared')}
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+              platform === 'family_shared'
+                ? 'bg-purple-600 text-white shadow-sm shadow-purple-600/30'
+                : 'bg-white dark:bg-slate-900 border border-purple-500/30 text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Family Shared</span>
+          </button>
+
+          {customPlatforms.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setPlatform(tab.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                 platform === tab.id
                   ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
-                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white'
               }`}
             >
-              {tab.label}
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: tab.color }} />
+              <span>{tab.name}</span>
             </button>
           ))}
         </div>
@@ -233,13 +267,18 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         </div>
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-          {games.map((game) => (
-            <GameCard
-              key={game.id}
-              game={game}
-              onClick={() => setSelectedGameId(game.id)}
-            />
-          ))}
+          {games.map((game) => {
+            const plat = customPlatforms.find((cp) => cp.id === game.platform);
+            return (
+              <GameCard
+                key={game.id}
+                game={game}
+                platformColor={plat?.color}
+                platformName={plat?.name}
+                onClick={() => setSelectedGameId(game.id)}
+              />
+            );
+          })}
         </div>
       ) : (
         /* List View */

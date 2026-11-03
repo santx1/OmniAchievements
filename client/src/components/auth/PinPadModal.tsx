@@ -99,7 +99,7 @@ export const PinPadModal: React.FC<PinPadModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
       <div
-        className={`w-full max-w-xs p-6 rounded-3xl glass border border-slate-700/60 shadow-2xl transition-transform ${
+        className={`w-full max-w-xs p-6 rounded-3xl glass-dark border border-slate-700/60 shadow-2xl transition-transform ${
           shake ? 'animate-bounce' : ''
         }`}
       >

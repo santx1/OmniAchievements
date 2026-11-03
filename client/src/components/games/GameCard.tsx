@@ -1,13 +1,15 @@
 import React from 'react';
 import { Game } from '../../types/index.js';
-import { Trophy, Clock, Sparkles } from 'lucide-react';
+import { Trophy, Clock, Users } from 'lucide-react';
 
 interface GameCardProps {
   game: Game;
   onClick: () => void;
+  platformColor?: string;
+  platformName?: string;
 }
 
-export const GameCard: React.FC<GameCardProps> = ({ game, onClick }) => {
+export const GameCard: React.FC<GameCardProps> = ({ game, onClick, platformColor, platformName }) => {
   const percentage = game.total_achievements > 0
     ? Math.round((game.unlocked_achievements / game.total_achievements) * 100)
     : 0;
@@ -15,42 +17,46 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onClick }) => {
   const is100Percent = game.status === 'completed_100' || (game.total_achievements > 0 && game.unlocked_achievements === game.total_achievements);
 
   const getPlatformBadge = (platform: string) => {
+    if (platformName && platformColor) {
+      return { label: platformName, bg: 'text-white border-white/20', customColor: platformColor };
+    }
     switch (platform) {
       case 'steam':
-        return { label: 'Steam', bg: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' };
+        return { label: 'Steam', bg: 'text-cyan-300 border-cyan-500/40', customColor: '#06b6d4' };
       case 'playstation':
-        return { label: 'PlayStation', bg: 'bg-blue-500/20 text-blue-400 border-blue-500/30' };
+        return { label: 'PlayStation', bg: 'text-blue-300 border-blue-500/40', customColor: '#3b82f6' };
       case 'xbox':
-        return { label: 'Xbox', bg: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' };
+        return { label: 'Xbox', bg: 'text-emerald-300 border-emerald-500/40', customColor: '#10b981' };
       case 'switch':
-        return { label: 'Switch', bg: 'bg-red-500/20 text-red-400 border-red-500/30' };
+        return { label: 'Switch', bg: 'text-red-300 border-red-500/40', customColor: '#ef4444' };
       case 'retro':
-        return { label: 'Retro / Emu', bg: 'bg-purple-500/20 text-purple-400 border-purple-500/30' };
+        return { label: 'Retro / Emu', bg: 'text-purple-300 border-purple-500/40', customColor: '#8b5cf6' };
       case 'epic':
-        return { label: 'Epic Games', bg: 'bg-amber-500/20 text-amber-400 border-amber-500/30' };
+        return { label: 'Epic Games', bg: 'text-amber-300 border-amber-500/40', customColor: '#f59e0b' };
       case 'gog':
-        return { label: 'GOG', bg: 'bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30' };
+        return { label: 'GOG', bg: 'text-fuchsia-300 border-fuchsia-500/40', customColor: '#d946ef' };
       default:
-        return { label: 'Custom', bg: 'bg-slate-500/20 text-slate-300 border-slate-500/30' };
+        return { label: platform.toUpperCase(), bg: 'text-slate-200 border-slate-500/40', customColor: '#64748b' };
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed_100':
-        return { label: '100% Completed', bg: 'bg-amber-500/20 text-amber-300 border-amber-500/40' };
+        return { label: '100% Completed', bg: 'bg-amber-500 text-slate-950 font-bold' };
       case 'finished':
-        return { label: 'Finished', bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
+        return { label: 'Finished', bg: 'bg-emerald-500/80 text-white font-medium' };
       case 'playing':
-        return { label: 'Playing', bg: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' };
+        return { label: 'Playing', bg: 'bg-indigo-600/85 text-white font-medium' };
       case 'unplayed':
       default:
-        return { label: 'Backlog', bg: 'bg-slate-700/40 text-slate-400 border-slate-700/60' };
+        return { label: 'Backlog', bg: 'bg-slate-900/80 text-slate-300 font-medium' };
     }
   };
 
   const platformBadge = getPlatformBadge(game.platform);
   const statusBadge = getStatusBadge(game.status);
+  const isFamilyShared = game.is_family_shared === 1;
 
   const hours = (game.playtime_minutes / 60).toFixed(1);
 
@@ -83,12 +89,25 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onClick }) => {
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent opacity-80" />
 
         {/* Top Badges */}
-        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none">
-          <span
-            className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border shadow-sm ${platformBadge.bg}`}
-          >
-            {platformBadge.label}
-          </span>
+        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between gap-1 pointer-events-none flex-wrap">
+          <div className="flex items-center gap-1">
+            <span
+              className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border shadow-sm ${platformBadge.bg}`}
+              style={{ backgroundColor: `${platformBadge.customColor}cc` }}
+            >
+              {platformBadge.label}
+            </span>
+
+            {isFamilyShared && (
+              <span
+                className="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-purple-600/90 text-white backdrop-blur-md flex items-center gap-0.5 shadow-sm"
+                title={game.family_owner ? `Family Shared by ${game.family_owner}` : 'Family Shared'}
+              >
+                <Users className="w-2.5 h-2.5" />
+                <span className="hidden sm:inline">Shared</span>
+              </span>
+            )}
+          </div>
 
           {is100Percent ? (
             <div className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-500 text-slate-950 shadow-md">
@@ -97,7 +116,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onClick }) => {
             </div>
           ) : (
             <span
-              className={`px-2 py-0.5 rounded-md text-[10px] font-medium backdrop-blur-md border ${statusBadge.bg}`}
+              className={`px-2 py-0.5 rounded-md text-[10px] backdrop-blur-md border border-white/10 shadow-sm ${statusBadge.bg}`}
             >
               {statusBadge.label}
             </span>

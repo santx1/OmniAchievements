@@ -16,7 +16,11 @@ import {
   Sparkles,
   ExternalLink,
   Edit2,
-  Save
+  Save,
+  Image as ImageIcon,
+  Palette,
+  Check,
+  Users
 } from 'lucide-react';
 
 interface GameDetailModalProps {
@@ -62,6 +66,18 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
   const [isSteamImportOpen, setIsSteamImportOpen] = useState(false);
   const [steamAppIdInput, setSteamAppIdInput] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+
+  // SteamGridDB Custom Artwork Picker state
+  const [isArtworkModalOpen, setIsArtworkModalOpen] = useState(false);
+  const [artSearchQuery, setArtSearchQuery] = useState('');
+  const [isSearchingArt, setIsSearchingArt] = useState(false);
+  const [artSearchResults, setArtSearchResults] = useState<any[]>([]);
+  const [selectedArtGameId, setSelectedArtGameId] = useState<number | null>(null);
+  const [availableCovers, setAvailableCovers] = useState<any[]>([]);
+  const [availableHeroes, setAvailableHeroes] = useState<any[]>([]);
+  const [customCoverInput, setCustomCoverInput] = useState('');
+  const [customHeroInput, setCustomHeroInput] = useState('');
+  const [isSavingArtwork, setIsSavingArtwork] = useState(false);
 
   useEffect(() => {
     if (isOpen && gameId) {
@@ -193,6 +209,107 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
     }
   };
 
+  const handleOpenArtworkPicker = () => {
+    if (!game) return;
+    setArtSearchQuery(game.title);
+    setCustomCoverInput(game.cover_image || '');
+    setCustomHeroInput(game.hero_image || '');
+    setIsArtworkModalOpen(true);
+    // Auto search on open
+    searchArtwork(game.title);
+  };
+
+  const searchArtwork = async (query: string) => {
+    if (!query.trim()) return;
+    setIsSearchingArt(true);
+    setArtSearchResults([]);
+    setAvailableCovers([]);
+    setAvailableHeroes([]);
+    try {
+      const res = await api.searchSteamGridDb(query.trim());
+      setArtSearchResults(res.results || []);
+      if (res.results && res.results.length > 0) {
+        // Auto select first match
+        await loadGridsForArtGame(res.results[0].id);
+      }
+    } catch (err) {
+      console.warn('SteamGridDB search error:', err);
+    } finally {
+      setIsSearchingArt(false);
+    }
+  };
+
+  const loadGridsForArtGame = async (gameId: number) => {
+    setSelectedArtGameId(gameId);
+    setIsSearchingArt(true);
+    try {
+      const [gridsRes, heroesRes] = await Promise.all([
+        api.getSteamGridDbCovers(gameId),
+        api.getSteamGridDbHeroes(gameId)
+      ]);
+      setAvailableCovers(gridsRes.grids || []);
+      setAvailableHeroes(heroesRes.heroes || []);
+    } catch (err) {
+      console.error('Failed to load covers', err);
+    } finally {
+      setIsSearchingArt(false);
+    }
+  };
+
+  const handleApplyCover = async (coverUrl: string) => {
+    if (!game) return;
+    setIsSavingArtwork(true);
+    try {
+      await api.updateGame(game.id, { cover_image: coverUrl });
+      setGame((prev) => prev ? { ...prev, cover_image: coverUrl } : null);
+      setCustomCoverInput(coverUrl);
+      onGameUpdated();
+    } catch (err) {
+      console.error('Failed to update cover', err);
+    } finally {
+      setIsSavingArtwork(false);
+    }
+  };
+
+  const handleApplyHero = async (heroUrl: string) => {
+    if (!game) return;
+    setIsSavingArtwork(true);
+    try {
+      await api.updateGame(game.id, { hero_image: heroUrl });
+      setGame((prev) => prev ? { ...prev, hero_image: heroUrl } : null);
+      setCustomHeroInput(heroUrl);
+      onGameUpdated();
+    } catch (err) {
+      console.error('Failed to update hero banner', err);
+    } finally {
+      setIsSavingArtwork(false);
+    }
+  };
+
+  const handleResetOfficialSteamArtwork = async () => {
+    if (!game || !game.external_id) return;
+    const officialCover = `https://cdn.akamai.steamstatic.com/steam/apps/${game.external_id}/library_600x900.jpg`;
+    const officialHero = `https://cdn.akamai.steamstatic.com/steam/apps/${game.external_id}/library_hero.jpg`;
+    const officialBanner = `https://cdn.akamai.steamstatic.com/steam/apps/${game.external_id}/header.jpg`;
+
+    setIsSavingArtwork(true);
+    try {
+      await api.updateGame(game.id, {
+        cover_image: officialCover,
+        hero_image: officialHero,
+        banner_image: officialBanner
+      });
+      setGame((prev) => prev ? { ...prev, cover_image: officialCover, hero_image: officialHero, banner_image: officialBanner } : null);
+      setCustomCoverInput(officialCover);
+      setCustomHeroInput(officialHero);
+      onGameUpdated();
+    } catch (err) {
+      console.error('Failed to reset artwork', err);
+    } finally {
+      setIsSavingArtwork(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const filteredAchievements = achievements.filter((a) => {
@@ -216,7 +333,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/85 backdrop-blur-xl overflow-y-auto">
-      <div className="w-full max-w-4xl rounded-3xl glass border border-slate-700/60 shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
+      <div className="w-full max-w-4xl rounded-3xl glass-dark border border-slate-700/60 shadow-2xl overflow-hidden my-auto max-h-[92vh] flex flex-col">
         {isLoading ? (
           <div className="p-16 flex flex-col items-center justify-center text-slate-400">
             <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
@@ -250,13 +367,22 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
               {/* Header Info Overlay */}
               <div className="absolute bottom-4 left-4 right-4 flex items-end gap-4">
-                {/* Box Art Thumbnail */}
-                <div className="hidden sm:block w-24 h-36 rounded-xl overflow-hidden border-2 border-slate-700/80 shadow-2xl shrink-0 bg-slate-900">
+                {/* Box Art Thumbnail with Edit Artwork Button */}
+                <div className="hidden sm:block relative w-24 h-36 rounded-xl overflow-hidden border-2 border-slate-700/80 shadow-2xl shrink-0 bg-slate-900 group">
                   <img
                     src={game.cover_image || game.banner_image}
                     alt={game.title}
                     className="w-full h-full object-cover"
                   />
+                  <button
+                    type="button"
+                    onClick={handleOpenArtworkPicker}
+                    title="Change Cover from SteamGridDB"
+                    className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 text-white text-[10px] font-bold transition-opacity"
+                  >
+                    <ImageIcon className="w-5 h-5 text-indigo-400" />
+                    <span>Change Art</span>
+                  </button>
                 </div>
 
                 <div className="flex-grow">
@@ -268,6 +394,12 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                       <span className="px-2.5 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/30 text-amber-300 border border-amber-500/50 flex items-center gap-1">
                         <Trophy className="w-3 h-3 text-amber-400" />
                         <span>100% Completed</span>
+                      </span>
+                    )}
+                    {game.is_family_shared === 1 && (
+                      <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-purple-600/30 text-purple-300 border border-purple-500/40 flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        <span>Family Shared {game.family_owner ? `by ${game.family_owner}` : ''}</span>
                       </span>
                     )}
                     {game.is_custom === 1 && (
@@ -317,6 +449,16 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
 
               {/* Actions */}
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleOpenArtworkPicker}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-purple-400 flex items-center gap-1.5 transition-colors shadow-sm"
+                  title="Choose custom box art & banners from SteamGridDB"
+                >
+                  <Palette className="w-3.5 h-3.5" />
+                  <span>Custom Artwork</span>
+                </button>
+
                 <button
                   onClick={() => setIsAddAchOpen(true)}
                   className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-200 flex items-center gap-1.5 transition-colors"
@@ -545,10 +687,227 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
         )}
       </div>
 
+      {/* SteamGridDB Custom Artwork Picker Modal */}
+      {isArtworkModalOpen && game && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-xl overflow-y-auto">
+          <div className="w-full max-w-3xl rounded-3xl glass-dark border border-purple-500/30 shadow-2xl p-6 relative my-auto max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center mb-4 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
+                  <Palette className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Choose Custom Artwork (SteamGridDB)</h3>
+                  <p className="text-xs text-slate-400">Select community & official high-res posters and hero banners for {game.title}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsArtworkModalOpen(false)}
+                className="w-8 h-8 rounded-full text-slate-400 hover:text-white flex items-center justify-center hover:bg-slate-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Direct URL Manual Inputs */}
+            <div className="mb-4 p-3 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2.5 shrink-0">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                Paste Direct Image URLs:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="flex gap-1.5">
+                  <input
+                    type="url"
+                    value={customCoverInput}
+                    onChange={(e) => setCustomCoverInput(e.target.value)}
+                    placeholder="Custom Cover URL (https://...)"
+                    className="flex-grow px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                  />
+                  <button
+                    type="button"
+                    disabled={!customCoverInput.trim() || isSavingArtwork}
+                    onClick={() => handleApplyCover(customCoverInput.trim())}
+                    className="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shrink-0 disabled:opacity-50"
+                  >
+                    Apply Cover
+                  </button>
+                </div>
+                <div className="flex gap-1.5">
+                  <input
+                    type="url"
+                    value={customHeroInput}
+                    onChange={(e) => setCustomHeroInput(e.target.value)}
+                    placeholder="Custom Hero URL (https://...)"
+                    className="flex-grow px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+                  />
+                  <button
+                    type="button"
+                    disabled={!customHeroInput.trim() || isSavingArtwork}
+                    onClick={() => handleApplyHero(customHeroInput.trim())}
+                    className="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shrink-0 disabled:opacity-50"
+                  >
+                    Apply Hero
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Search Input */}
+            <div className="flex gap-2 mb-4 shrink-0">
+              <input
+                type="text"
+                value={artSearchQuery}
+                onChange={(e) => setArtSearchQuery(e.target.value)}
+                placeholder="Search game on SteamGridDB..."
+                className="flex-grow px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+              />
+              <button
+                type="button"
+                onClick={() => searchArtwork(artSearchQuery)}
+                disabled={isSearchingArt || !artSearchQuery.trim()}
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shrink-0 disabled:opacity-50"
+              >
+                {isSearchingArt ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                <span>Search</span>
+              </button>
+            </div>
+
+            {/* Matched Games Selector */}
+            {artSearchResults.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-3 shrink-0">
+                {artSearchResults.slice(0, 6).map((res) => (
+                  <button
+                    key={res.id}
+                    type="button"
+                    onClick={() => loadGridsForArtGame(res.id)}
+                    className={`px-3 py-1 rounded-xl text-xs font-medium border transition-colors shrink-0 ${
+                      selectedArtGameId === res.id
+                        ? 'bg-purple-600 text-white border-purple-500'
+                        : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {res.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Scrollable Posters & Heroes */}
+            <div className="overflow-y-auto flex-grow space-y-4 pr-1">
+              {/* Vertical Posters (600x900) */}
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300 block mb-2">
+                  Vertical Box Art (Click to Apply Cover):
+                </span>
+                {availableCovers.length === 0 ? (
+                  <p className="text-xs text-slate-500 py-4">No custom covers found for this query.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    {availableCovers.slice(0, 15).map((cov, idx) => {
+                      const isSelected = game.cover_image === cov.url;
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => handleApplyCover(cov.url)}
+                          className={`group relative rounded-xl overflow-hidden aspect-[2/3] border-2 cursor-pointer transition-all hover:scale-105 ${
+                            isSelected
+                              ? 'border-purple-500 ring-2 ring-purple-500 shadow-glow'
+                              : 'border-slate-800 hover:border-purple-400'
+                          }`}
+                        >
+                          <img
+                            src={cov.thumb || cov.url}
+                            alt="SteamGridDB Cover"
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-purple-600/30 flex items-center justify-center">
+                              <Check className="w-6 h-6 text-white drop-shadow" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[11px] font-bold transition-opacity">
+                            Set as Cover
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Wide Hero Banners (1920x620) */}
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-300 block mb-2">
+                  Hero Backdrops (Click to Apply Banner):
+                </span>
+                {availableHeroes.length === 0 ? (
+                  <p className="text-xs text-slate-500 py-4">No custom heroes found for this query.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {availableHeroes.slice(0, 6).map((hero, idx) => {
+                      const isSelected = game.hero_image === hero.url;
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => handleApplyHero(hero.url)}
+                          className={`group relative rounded-xl overflow-hidden aspect-[16/6] border-2 cursor-pointer transition-all hover:scale-102 ${
+                            isSelected
+                              ? 'border-purple-500 ring-2 ring-purple-500 shadow-glow'
+                              : 'border-slate-800 hover:border-purple-400'
+                          }`}
+                        >
+                          <img
+                            src={hero.thumb || hero.url}
+                            alt="SteamGridDB Hero"
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                          {isSelected && (
+                            <div className="absolute inset-0 bg-purple-600/30 flex items-center justify-center">
+                              <Check className="w-6 h-6 text-white drop-shadow" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-bold transition-opacity">
+                            Set as Hero Banner
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Controls & Reset */}
+            <div className="pt-4 mt-2 border-t border-slate-800 shrink-0 flex items-center justify-between gap-3">
+              {game.platform === 'steam' && game.external_id ? (
+                <button
+                  type="button"
+                  onClick={handleResetOfficialSteamArtwork}
+                  disabled={isSavingArtwork}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+                >
+                  Reset to Official Steam Art
+                </button>
+              ) : <div />}
+
+              <button
+                type="button"
+                onClick={() => setIsArtworkModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal (With Blacklist Checkbox for Bloatware) */}
       {isDeleteConfirmOpen && game && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
-          <div className="w-full max-w-md p-6 rounded-3xl glass border border-rose-500/30 shadow-2xl">
+          <div className="w-full max-w-md p-6 rounded-3xl glass-dark border border-rose-500/30 shadow-2xl">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-400 flex items-center justify-center mb-4">
               <AlertTriangle className="w-6 h-6" />
             </div>
@@ -604,7 +963,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
       {/* Add Custom Achievement Modal */}
       {isAddAchOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
-          <div className="w-full max-w-md p-6 rounded-3xl glass border border-slate-700/60 shadow-2xl">
+          <div className="w-full max-w-md p-6 rounded-3xl glass-dark border border-slate-700/60 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-white">Add Custom Achievement</h3>
               <button
@@ -667,7 +1026,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
       {/* Import Steam Achievements Modal */}
       {isSteamImportOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
-          <div className="w-full max-w-md p-6 rounded-3xl glass border border-cyan-500/30 shadow-2xl">
+          <div className="w-full max-w-md p-6 rounded-3xl glass-dark border border-cyan-500/30 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <RefreshCw className="w-5 h-5 text-cyan-400" />

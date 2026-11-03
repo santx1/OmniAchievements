@@ -27,7 +27,7 @@ export const MasterPasswordGate: React.FC = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl">
-      <div className="w-full max-w-md p-8 rounded-3xl glass border border-slate-700/60 shadow-2xl relative overflow-hidden">
+      <div className="w-full max-w-md p-8 rounded-3xl glass-dark border border-slate-700/60 shadow-2xl relative overflow-hidden">
         {/* Ambient background glow */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />

@@ -10,7 +10,10 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Users,
+  Plus,
+  Trash2
 } from 'lucide-react';
 
 interface SteamSyncModalProps {
@@ -33,7 +36,64 @@ export const SteamSyncModal: React.FC<SteamSyncModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isBlacklistOpen, setIsBlacklistOpen] = useState(false);
 
+  // Steam Family Sharing Accounts
+  const [familyAccounts, setFamilyAccounts] = useState<{ name: string; steamId: string }[]>(() => {
+    try {
+      return activeProfile?.family_steam_ids ? JSON.parse(activeProfile.family_steam_ids) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [newFamilyName, setNewFamilyName] = useState('');
+  const [newFamilySteamId, setNewFamilySteamId] = useState('');
+  const [isAddingFamily, setIsAddingFamily] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleAddFamilyAccount = async () => {
+    if (!newFamilySteamId.trim() || !activeProfile) return;
+    setIsAddingFamily(true);
+    let resolvedId = newFamilySteamId.trim();
+
+    // If vanity URL, try to resolve it
+    if (!/^\d{17}$/.test(resolvedId)) {
+      try {
+        const res = await api.resolveSteamVanity(resolvedId);
+        resolvedId = res.steamId;
+      } catch (e) {}
+    }
+
+    const updated = [
+      ...familyAccounts.filter((f) => f.steamId !== resolvedId),
+      { name: newFamilyName.trim() || 'Family Member', steamId: resolvedId }
+    ];
+
+    try {
+      await api.updateProfile(activeProfile.id, {
+        family_steam_ids: JSON.stringify(updated)
+      });
+      setFamilyAccounts(updated);
+      setNewFamilyName('');
+      setNewFamilySteamId('');
+      await refreshActiveProfile();
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to save family account');
+    } finally {
+      setIsAddingFamily(false);
+    }
+  };
+
+  const handleRemoveFamilyAccount = async (steamIdToRemove: string) => {
+    if (!activeProfile) return;
+    const updated = familyAccounts.filter((f) => f.steamId !== steamIdToRemove);
+    try {
+      await api.updateProfile(activeProfile.id, {
+        family_steam_ids: JSON.stringify(updated)
+      });
+      setFamilyAccounts(updated);
+      await refreshActiveProfile();
+    } catch (err) {}
+  };
 
   const handleResolveVanity = async () => {
     if (!vanityInput.trim()) return;
@@ -74,7 +134,7 @@ export const SteamSyncModal: React.FC<SteamSyncModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xl">
-        <div className="w-full max-w-lg rounded-3xl glass border border-slate-700/60 shadow-2xl p-6 relative max-h-[92vh] overflow-y-auto">
+        <div className="w-full max-w-lg rounded-3xl glass-dark border border-slate-700/60 shadow-2xl p-6 relative max-h-[92vh] overflow-y-auto">
           <div className="flex justify-between items-center mb-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-cyan-600/20 text-cyan-400 flex items-center justify-center border border-cyan-500/30">
@@ -132,6 +192,68 @@ export const SteamSyncModal: React.FC<SteamSyncModalProps> = ({
               </div>
             </div>
 
+            {/* Steam Family Sharing Accounts */}
+            <div className="p-3.5 rounded-2xl bg-purple-950/20 border border-purple-500/30 space-y-2.5">
+              <div className="flex items-center gap-2 text-xs font-bold text-purple-300">
+                <Users className="w-4 h-4 text-purple-400" />
+                <span>Steam Family Sharing & Shared Libraries</span>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Add family members' SteamIDs (or profile URLs) to sync borrowed/shared family games too!
+              </p>
+
+              {/* Existing Family Accounts */}
+              {familyAccounts.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  {familyAccounts.map((fam) => (
+                    <div
+                      key={fam.steamId}
+                      className="flex items-center justify-between p-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-200"
+                    >
+                      <div>
+                        <span className="font-semibold text-white">{fam.name}</span>
+                        <span className="text-[11px] text-slate-500 ml-2 font-mono">{fam.steamId}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFamilyAccount(fam.steamId)}
+                        className="text-slate-500 hover:text-rose-400 p-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add Family Account form */}
+              <div className="flex gap-2 pt-1">
+                <input
+                  type="text"
+                  value={newFamilyName}
+                  onChange={(e) => setNewFamilyName(e.target.value)}
+                  placeholder="Name (e.g. Dad, Brother)"
+                  className="w-1/3 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white"
+                />
+                <input
+                  type="text"
+                  value={newFamilySteamId}
+                  onChange={(e) => setNewFamilySteamId(e.target.value)}
+                  placeholder="SteamID64 or URL"
+                  className="flex-grow px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs font-mono text-white"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddFamilyAccount}
+                  disabled={isAddingFamily || !newFamilySteamId.trim()}
+                  className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold shrink-0 flex items-center gap-1 transition-colors disabled:opacity-50"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add</span>
+                </button>
+              </div>
+            </div>
+
             {/* Security Guarantee Note */}
             <div className="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 flex items-start gap-3">
               <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
@@ -174,7 +296,8 @@ export const SteamSyncModal: React.FC<SteamSyncModalProps> = ({
                   <div>• Games scanned: <strong>{syncResult.totalFound}</strong></div>
                   <div>• New games added: <strong>{syncResult.added}</strong></div>
                   <div>• Games updated: <strong>{syncResult.updated}</strong></div>
-                  <div>• Bloat games skipped: <strong className="text-amber-400">{syncResult.skippedBlacklisted}</strong></div>
+                  <div>• Family shared: <strong className="text-purple-400">{syncResult.familyShared || 0}</strong></div>
+                  <div className="col-span-2">• Bloat games skipped: <strong className="text-amber-400">{syncResult.skippedBlacklisted}</strong></div>
                 </div>
               </div>
             )}

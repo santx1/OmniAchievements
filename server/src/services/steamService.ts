@@ -164,6 +164,7 @@ export class SteamService {
     let addedCount = 0;
     let updatedCount = 0;
     let skippedBloatCount = 0;
+    let familySharedCount = 0;
 
     const now = new Date().toISOString();
 
@@ -186,7 +187,7 @@ export class SteamService {
 
       // Check if game already in DB
       const existingGame = db
-        .prepare('SELECT id, status, total_achievements, unlocked_achievements FROM games WHERE profile_id = ? AND external_id = ?')
+        .prepare('SELECT id, status, total_achievements, unlocked_achievements, is_family_shared FROM games WHERE profile_id = ? AND external_id = ?')
         .get(profileId, appIdStr) as any;
 
       let gameId = existingGame?.id;
@@ -197,9 +198,9 @@ export class SteamService {
         db.prepare(`
           INSERT INTO games (
             id, profile_id, title, platform, external_id, cover_image, banner_image, hero_image, icon_image,
-            status, is_custom, playtime_minutes, total_achievements, unlocked_achievements, last_played_at,
+            status, is_custom, is_family_shared, family_owner, playtime_minutes, total_achievements, unlocked_achievements, last_played_at,
             created_at, updated_at
-          ) VALUES (?, ?, ?, 'steam', ?, ?, ?, ?, ?, 'unplayed', 0, ?, 0, 0, ?, ?, ?)
+          ) VALUES (?, ?, ?, 'steam', ?, ?, ?, ?, ?, 'unplayed', 0, 0, '', ?, 0, 0, ?, ?, ?)
         `).run(
           gameId,
           profileId,
@@ -220,6 +221,8 @@ export class SteamService {
           UPDATE games SET
             title = ?,
             playtime_minutes = ?,
+            is_family_shared = 0,
+            family_owner = '',
             last_played_at = COALESCE(NULLIF(?, ''), last_played_at),
             cover_image = COALESCE(NULLIF(cover_image, ''), ?),
             banner_image = COALESCE(NULLIF(banner_image, ''), ?),
@@ -249,11 +252,88 @@ export class SteamService {
       }
     }
 
+    // 3. Sync Family Shared Accounts (Steam Families)
+    let familyAccounts: any[] = [];
+    try {
+      if (profile.family_steam_ids) {
+        familyAccounts = JSON.parse(profile.family_steam_ids);
+      }
+    } catch (e) {}
+
+    for (const fam of familyAccounts) {
+      if (!fam.steamId || fam.steamId === steamId) continue;
+      try {
+        const famGames = await this.getOwnedGames(fam.steamId, apiKey);
+        for (const fg of famGames) {
+          const fAppIdStr = fg.appid.toString();
+          if (blacklistedIds.has(fAppIdStr)) continue;
+
+          // Check if already in DB
+          const existing = db
+            .prepare('SELECT id, is_family_shared FROM games WHERE profile_id = ? AND external_id = ?')
+            .get(profileId, fAppIdStr) as any;
+
+          // If directly owned by user, do not overwrite with family shared
+          if (existing && existing.is_family_shared === 0) continue;
+
+          const fCover = `https://cdn.akamai.steamstatic.com/steam/apps/${fg.appid}/library_600x900.jpg`;
+          const fBanner = `https://cdn.akamai.steamstatic.com/steam/apps/${fg.appid}/header.jpg`;
+          const fHero = `https://cdn.akamai.steamstatic.com/steam/apps/${fg.appid}/library_hero.jpg`;
+          const fIcon = fg.img_icon_url
+            ? `https://media.steampowered.com/steamcommunity/public/images/apps/${fg.appid}/${fg.img_icon_url}.jpg`
+            : `https://cdn.akamai.steamstatic.com/steam/apps/${fg.appid}/logo.png`;
+
+          let fGameId = existing?.id;
+          if (!existing) {
+            fGameId = crypto.randomUUID();
+            db.prepare(`
+              INSERT INTO games (
+                id, profile_id, title, platform, external_id, cover_image, banner_image, hero_image, icon_image,
+                status, is_custom, is_family_shared, family_owner, playtime_minutes, total_achievements, unlocked_achievements,
+                created_at, updated_at
+              ) VALUES (?, ?, ?, 'steam', ?, ?, ?, ?, ?, 'unplayed', 0, 1, ?, 0, 0, 0, ?, ?)
+            `).run(
+              fGameId,
+              profileId,
+              fg.name,
+              fAppIdStr,
+              fCover,
+              fBanner,
+              fHero,
+              fIcon,
+              fam.name || 'Family Member',
+              now,
+              now
+            );
+            addedCount++;
+            familySharedCount++;
+          } else {
+            db.prepare(`
+              UPDATE games SET
+                title = ?,
+                is_family_shared = 1,
+                family_owner = ?,
+                updated_at = ?
+              WHERE id = ?
+            `).run(fg.name, fam.name || 'Family Member', now, fGameId);
+          }
+
+          // Sync player's own achievements for this family-shared game
+          try {
+            await this.syncAchievementsForGame(profileId, fGameId, steamId, fg.appid, apiKey);
+          } catch (e) {}
+        }
+      } catch (err: any) {
+        console.warn(`[SteamSync] Failed to sync family account ${fam.name}:`, err.message);
+      }
+    }
+
     return {
       totalFound: games.length,
       added: addedCount,
       updated: updatedCount,
-      skippedBlacklisted: skippedBloatCount
+      skippedBlacklisted: skippedBloatCount,
+      familyShared: familySharedCount
     };
   }
 

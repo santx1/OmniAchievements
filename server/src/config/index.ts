@@ -2,8 +2,11 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 
-// Load .env if present
+// Load .env if present (check current directory and parent directory)
 dotenv.config();
+if (fs.existsSync(path.resolve(process.cwd(), '../.env'))) {
+  dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
+}
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 
@@ -31,11 +34,16 @@ if (fs.existsSync(CONFIG_FILE)) {
   }
 }
 
-// Generate a random default master password if none provided anywhere
-const defaultMasterPassword = process.env.MASTER_PASSWORD || storedConfig.masterPassword || 'changeme123';
-
-if (!storedConfig.masterPassword) {
-  storedConfig.masterPassword = defaultMasterPassword;
+// Prefer environment variable MASTER_PASSWORD if explicitly set
+if (process.env.MASTER_PASSWORD) {
+  storedConfig.masterPassword = process.env.MASTER_PASSWORD;
+  try {
+    fs.writeFileSync(CONFIG_FILE, JSON.stringify(storedConfig, null, 2));
+  } catch (err) {
+    console.error('Failed to write updated config.json', err);
+  }
+} else if (!storedConfig.masterPassword) {
+  storedConfig.masterPassword = 'changeme123';
   try {
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(storedConfig, null, 2));
   } catch (err) {

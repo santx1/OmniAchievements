@@ -16,6 +16,7 @@ import statsRoutes from './routes/statsRoutes.js';
 import deckyRoutes from './routes/deckyRoutes.js';
 import retroRoutes from './routes/retroRoutes.js';
 import backupRoutes from './routes/backupRoutes.js';
+import platformRoutes from './routes/platformRoutes.js';
 import { BackupService } from './services/backupService.js';
 
 const app = express();
@@ -46,6 +47,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/decky', deckyRoutes);
 app.use('/api/retro', retroRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/platforms', platformRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

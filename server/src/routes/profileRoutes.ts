@@ -16,7 +16,7 @@ router.use(masterAuth);
  */
 router.get('/', (req: Request, res: Response) => {
   const profiles = db.prepare(`
-    SELECT id, name, avatar, theme, accent_color, steam_id, retro_username, created_at, updated_at
+    SELECT id, name, avatar, theme, accent_color, steam_id, retro_username, family_steam_ids, created_at, updated_at
     FROM profiles
     ORDER BY created_at ASC
   `).all();
@@ -137,7 +137,8 @@ router.put('/:id', (req: Request, res: Response) => {
     steam_id,
     steam_api_key,
     retro_username,
-    retro_api_key
+    retro_api_key,
+    family_steam_ids
   } = req.body;
 
   const profile = db.prepare('SELECT * FROM profiles WHERE id = ?').get(id) as any;
@@ -169,6 +170,7 @@ router.put('/:id', (req: Request, res: Response) => {
   const updatedApiKey = steam_api_key !== undefined ? steam_api_key.trim() : profile.steam_api_key;
   const updatedRetroUser = retro_username !== undefined ? retro_username.trim() : (profile.retro_username || '');
   const updatedRetroKey = retro_api_key !== undefined ? retro_api_key.trim() : (profile.retro_api_key || '');
+  const updatedFamilyIds = family_steam_ids !== undefined ? (typeof family_steam_ids === 'string' ? family_steam_ids : JSON.stringify(family_steam_ids)) : (profile.family_steam_ids || '[]');
   const now = new Date().toISOString();
 
   db.prepare(`
@@ -182,6 +184,7 @@ router.put('/:id', (req: Request, res: Response) => {
       steam_api_key = ?,
       retro_username = ?,
       retro_api_key = ?,
+      family_steam_ids = ?,
       updated_at = ?
     WHERE id = ?
   `).run(
@@ -194,12 +197,13 @@ router.put('/:id', (req: Request, res: Response) => {
     updatedApiKey,
     updatedRetroUser,
     updatedRetroKey,
+    updatedFamilyIds,
     now,
     id
   );
 
   const updatedProfile = db.prepare(`
-    SELECT id, name, avatar, theme, accent_color, steam_id, retro_username, created_at, updated_at
+    SELECT id, name, avatar, theme, accent_color, steam_id, retro_username, family_steam_ids, created_at, updated_at
     FROM profiles WHERE id = ?
   `).get(id);
 

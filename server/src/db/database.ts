@@ -95,7 +95,18 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_achievements_game ON achievements(game_id);
     CREATE INDEX IF NOT EXISTS idx_achievements_profile ON achievements(profile_id);
     CREATE INDEX IF NOT EXISTS idx_blacklist_profile_app ON steam_blacklist(profile_id, steam_app_id);
+    CREATE TABLE IF NOT EXISTS custom_platforms (
+      id TEXT PRIMARY KEY,
+      profile_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_decky_links_shortcut ON decky_links(steam_shortcut_id);
+    CREATE INDEX IF NOT EXISTS idx_custom_platforms_profile ON custom_platforms(profile_id);
   `);
 
   // Migrations for existing DBs
@@ -105,19 +116,34 @@ export function initDatabase() {
   try {
     db.exec(`ALTER TABLE profiles ADD COLUMN retro_api_key TEXT DEFAULT ''`);
   } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE profiles ADD COLUMN family_steam_ids TEXT DEFAULT '[]'`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE games ADD COLUMN is_family_shared INTEGER DEFAULT 0`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE games ADD COLUMN family_owner TEXT DEFAULT ''`);
+  } catch (e) {}
+  // Replace old Unsplash avatars with neutral avatar
+  try {
+    const defaultAvatarSvg = "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Crect width='100' height='100' rx='30' fill='%23cbd5e1'/%3E%3Ccircle cx='50' cy='36' r='15' fill='%23475569'/%3E%3Cpath d='M22 84 C22 66 34 58 50 58 C66 58 78 66 78 84 C78 88 74 90 70 90 L30 90 C26 90 22 88 22 84 Z' fill='%23475569'/%3E%3C/svg%3E";
+    db.prepare(`UPDATE profiles SET avatar = ? WHERE avatar LIKE '%unsplash.com%'`).run(defaultAvatarSvg);
+  } catch (e) {}
 
   // Create default admin/main profile if none exists
   const profileCount = db.prepare('SELECT COUNT(*) as count FROM profiles').get() as { count: number };
   if (profileCount.count === 0) {
     const defaultPinHash = bcrypt.hashSync('000000', 10);
     const now = new Date().toISOString();
+    const defaultAvatarSvg = "data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3Crect width='100' height='100' rx='30' fill='%23cbd5e1'/%3E%3Ccircle cx='50' cy='36' r='15' fill='%23475569'/%3E%3Cpath d='M22 84 C22 66 34 58 50 58 C66 58 78 66 78 84 C78 88 74 90 70 90 L30 90 C26 90 22 88 22 84 Z' fill='%23475569'/%3E%3C/svg%3E";
     db.prepare(`
       INSERT INTO profiles (id, name, avatar, pin_hash, theme, accent_color, steam_id, steam_api_key, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       'default-profile',
       'Player One',
-      'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
+      defaultAvatarSvg,
       defaultPinHash,
       'dark',
       '#6366f1',

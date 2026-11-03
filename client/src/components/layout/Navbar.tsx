@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useTheme } from '../../context/ThemeContext.js';
 import { Trophy, RefreshCw, Sun, Moon, Laptop, Plus, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { getAvatarUrl } from '../../utils/avatars.js';
 
 interface NavbarProps {
   onOpenAddGame: () => void;
@@ -24,7 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full glass dark:glass border-b border-slate-200/50 dark:border-slate-800/80 pt-safe transition-colors">
+    <header className="sticky top-0 z-40 w-full glass border-b border-slate-200/80 dark:border-slate-800/80 pt-safe transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         {/* App Brand */}
         <div className="flex items-center gap-3">
@@ -96,7 +97,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="group flex items-center gap-2 p-1 sm:pr-2.5 rounded-full bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-700/80 border border-slate-300/50 dark:border-slate-700 transition-colors"
               >
                 <img
-                  src={activeProfile.avatar}
+                  src={getAvatarUrl(activeProfile.avatar)}
                   alt={activeProfile.name}
                   className="w-7 h-7 rounded-full object-cover border border-indigo-500"
                 />
