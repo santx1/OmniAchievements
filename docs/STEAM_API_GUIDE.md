@@ -33,7 +33,22 @@ In the Steam Sync modal in OmniAchievements, simply paste your Steam profile lin
 
 ---
 
-## 🔒 3. Steam Account Security Architecture
+## 👨‍👩‍👧‍👦 3. Steam Family Sharing Synchronization
+
+OmniAchievements supports synchronizing **Steam Family Sharing** libraries across household accounts:
+
+### How it works:
+1. In OmniAchievements, go to **Settings > Steam Family Sharing Accounts**.
+2. Enter a friendly name (e.g. `Brother's Library` or `Steam Deck Account`) and their **SteamID64** (or paste their Steam community profile URL).
+3. When you open **Sync Steam** in the app header:
+   * Select whether to sync **Your Account**, a **Family Member's Library**, or **All Accounts**.
+   * OmniAchievements queries Steam's `IPlayerService/GetOwnedGames` with `include_played_free_games=1` and `include_appinfo=1`.
+   * Any shared games are automatically tagged and attributed to your universal backlog without duplicate conflicts.
+   * If a family-shared game contains bloat or demos, you can delete it with 1 click and it is added to your personal blacklist so it will not sync again.
+
+---
+
+## 🔒 4. Steam Account Security Architecture
 
 Security is the #1 priority when synchronizing external gaming accounts. Here is how OmniAchievements ensures your account **cannot be stolen, banned, or compromised**:
 

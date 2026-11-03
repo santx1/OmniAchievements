@@ -27,16 +27,23 @@ Disclaimer: This app has been 100% AI made, including documentation and all the 
 - **Web Gateway with Master Password**: Access the web version securely from anywhere. An immediate master password gate blocks unauthorized visitors before any profile or data is accessible.
 - **Easy IPA Compilation**: Automated GitHub Actions workflow compiles the `.ipa` for your iPhone and iPad with 1-click in the cloud—no Mac required!
 
-### 🔄 Steam API Synchronization & Auto 100% Detection
+### 🔄 Steam API Synchronization, Family Sharing & Auto 100% Detection
 - **Automatic Library Sync**: Imports owned games, playtime, and unlocked achievements directly using Valve's official Steam Web API.
+- **Steam Family Sharing Multi-Account Sync**: Add family members' Steam accounts in your profile settings. OmniAchievements synchronizes both your own and shared family games with full playtime and achievement tracking.
 - **Automatic 100% Classification**: Games with all achievements unlocked are automatically classified as `100% Completed` with gold crown badges and completion animations.
 - **Free Bloatware Blacklist**: Easily delete unwanted free games from Steam with a persistent blacklist so they are never imported again during future syncs.
 
-### 🎨 Manual Add & SteamGridDB Integration
+### 🎨 Manual Add, Custom Tags & SteamGridDB Artwork Picker
 - **Cross-Platform Manual Game Addition**: Add games from PlayStation 5/4, Xbox Series/One, Nintendo Switch, RetroArch/Emulators, Epic Games, GOG, or Custom platforms.
-- **SteamGridDB Live Artwork Search**: Live search queries SteamGridDB to fetch official 600x900 vertical box art, 1920x620 wide hero banners, logos, and icons with 1 click.
+- **Interactive SteamGridDB Artwork Chooser**: Browse and swap between official 600x900 vertical covers and 1920x620 wide hero banners directly inside any game's detail view.
+- **Customizable Console & Platform Tags**: Create, edit (name, hex color), and delete custom console tags in settings. The library filter bar and game card badges adapt dynamically with custom styling.
 - **Steam Schema Importer for Non-Steam Games**: Enter a Steam AppID to instantly import official achievements, localized badges, and descriptions for non-Steam games (e.g. console or emulator games).
 - **Custom Achievement Creator**: Create custom achievements with custom titles, descriptions, and icons, and toggle unlock statuses anytime.
+
+### 🤖 AI Achievement Architect & Vector Badge Engine
+- **Generative AI Trophy Sets**: Create complete, authentic achievement lists for any game (retro, console, emulator, or indie) using Google Gemini (`gemini-2.5-flash`) or offline algorithmic fallbacks.
+- **Procedural SVG Vector Badge Generator**: Generates high-res vector badges for locked and unlocked achievement states with glowing halos, tiered geometric crests, and vibrant colors without relying on external image hosts.
+- **Universal `.omniachievements.json` Standard**: Export and import complete game achievement sets to share with the community or backup your custom libraries.
 
 ### 📊 Advanced Statistics & Visual Analytics
 - **Interactive Visual Graphics**: Interactive Donut chart displaying your backlog breakdown: **Unplayed (Backlog)**, **Playing**, **Finished**, and **100% Completed**.
@@ -46,13 +53,16 @@ Disclaimer: This app has been 100% AI made, including documentation and all the 
 
 ### 👨‍👩‍👧‍👦 Multi-User Household Profiles
 - **Independent Profiles**: Allow multiple people in the same household to maintain separate libraries, playtimes, achievements, and statistics.
-- **Profile Customization**: Custom avatar (URL or presets), profile name, SteamID64, and **6-digit security PIN** with iOS-style numeric keypad.
-- **Visual Style Modes**: Dark mode (OLED true black), Light mode, System synchronized mode, and custom accent colors (Indigo, Cyan/Steam, Emerald, Amber/Gold, Crimson, Violet, Rose).
+- **Minimalist Neutral Avatars & Custom Picture URLs**: Choose from 8 minimalist silhouette color palettes or paste any custom web image URL (Steam, Discord, Gravatar, Imgur, etc.) with live preview.
+- **6-Digit Security PIN**: Protect each profile with an iOS-style numeric keypad PIN.
+- **Visual Style Modes**: High-contrast OLED dark mode, responsive light mode, system synchronized mode, and custom accent colors (Indigo, Cyan/Steam, Emerald, Amber/Gold, Crimson, Violet, Rose).
 
-### 🕹️ Synchronized Decky Plugin for Legion Go S SteamOS
-- **Handheld Integration**: Complete Decky Loader plugin for Legion Go S and Steam Deck running SteamOS, Bazzite, or ChimeraOS.
+### 🕹️ Synchronized Decky Plugin for Legion Go S & Steam Deck
+- **Handheld Integration**: Complete Decky Loader plugin for Lenovo Legion Go S and Steam Deck running SteamOS, Bazzite, or ChimeraOS.
 - **Non-Steam Game Linking**: Detects running non-Steam shortcuts and links them to OmniAchievements titles.
 - **In-Game Overlay**: Displays custom achievements directly inside the SteamOS Quick Access Menu (QAM) while playing!
+- **1-Click In-Decky Self-Updater**: Update the plugin directly from the SteamOS Quick Access Menu without leaving Gaming Mode or touching a terminal (supports local server LAN distribution and GitHub channels).
+- **Self-Contained & Resilient**: Standalone pre-compiled ES module bundle with zero external npm dependencies, eliminating webview loader crashes.
 
 ### 🛡️ Steam Account Safety Guarantee
 - **Zero Credential Handling**: OmniAchievements **never asks for or stores your Steam password or Steam Guard codes**.
@@ -125,7 +135,7 @@ cd omniachievements
 cp .env.example .env
 nano .env
 ```
-Set your `MASTER_PASSWORD`, `STEAM_API_KEY`, and `STEAMGRIDDB_API_KEY`.
+Set your `MASTER_PASSWORD`, `STEAM_API_KEY`, `STEAMGRIDDB_API_KEY`, and optional `GEMINI_API_KEY` (for the AI Achievement Architect).
 
 ### 3. Start the Server
 ```bash
@@ -148,21 +158,23 @@ You can compile the iOS/iPadOS app using **GitHub Actions with zero Mac requirem
 
 ---
 
-## 🎮 Installing on Legion Go S (SteamOS Decky Plugin)
+## 🎮 Installing on Legion Go S & Steam Deck (Decky Plugin)
 
 1. Copy the `decky-plugin/` folder to `~/homebrew/plugins/OmniAchievements` on your handheld.
 2. Restart Decky: `sudo systemctl restart plugin_loader.service`.
 3. Open the Quick Access Menu in game to link non-Steam titles and track achievements on your Legion Go!
+4. **Future Updates**: Update directly from Decky with 1 click using the built-in **Plugin Self-Updater**!
 
-📖 Read the complete [Legion Go Decky Plugin Guide](docs/DECKY_PLUGIN_GUIDE.md).
+📖 Read the complete [Legion Go & Steam Deck Plugin Guide](docs/DECKY_PLUGIN_GUIDE.md).
 
 ---
 
 ## 📚 Documentation
 - [Self-Hosting & Reverse Proxy Guide](docs/SETUP_GUIDE.md)
-- [Steam Web API & Security Guide](docs/STEAM_API_GUIDE.md)
+- [Steam Web API, Security & Family Sharing Guide](docs/STEAM_API_GUIDE.md)
+- [AI Achievement Architect & Vector Badges Guide](docs/AI_ACHIEVEMENTS_GUIDE.md)
 - [iOS / iPadOS IPA Compilation Guide](docs/IOS_IPA_BUILD_GUIDE.md)
-- [Legion Go / SteamOS Decky Plugin Guide](docs/DECKY_PLUGIN_GUIDE.md)
+- [Legion Go / SteamOS Decky Plugin & Self-Updater Guide](docs/DECKY_PLUGIN_GUIDE.md)
 
 ---
 

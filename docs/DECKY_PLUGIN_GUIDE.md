@@ -55,3 +55,40 @@ sudo systemctl restart plugin_loader.service
 3. Decky will detect the active game (e.g., "The Legend of Zelda" or "Bloodborne").
 4. Select the corresponding title from your OmniAchievements library and tap **Link Game & Load Achievements**.
 5. All custom achievements will immediately load on your screen with high-res badges and unlock states!
+
+---
+
+## ⚡ 1-Click In-Decky Self-Updater
+
+Starting from **v1.0.1**, you no longer need to connect via SSH or use terminal commands to update the plugin when new features or bug fixes are released!
+
+### How to Update directly from SteamOS:
+1. Open the **Quick Access Menu** > **OmniAchievements**.
+2. Scroll down to the **"Plugin Self-Updater"** section.
+3. Choose your preferred update channel:
+   * **Auto (Recommended)**: Checks your local home server first, falling back to GitHub if you are away from home.
+   * **Local OmniAchievements Server**: Downloads the update bundle directly across your Wi-Fi from your Docker container with zero latency and full offline capability.
+   * **GitHub Repository**: Downloads the newest files from the official repository branch.
+4. Tap **Check for Updates**.
+5. If a new version is detected, tap **Update to vX.X.X Now**.
+6. The plugin downloads and safely updates its files atomically, firing a native Steam notification toast when complete.
+7. Tap **Reload Decky Now** to apply the update immediately!
+
+---
+
+## 🛠️ Architecture & Troubleshooting
+
+### Self-Contained Standalone Bundle
+* The plugin frontend is compiled as an ES module (`dist/index.js`) using `esbuild` with custom inline SVG icons (`TrophyIcon`, `CheckCircleIcon`, `LockIcon`).
+* **Zero runtime npm packages**: Because SteamOS Chromium webviews do not provide Node packages, all UI components and dependencies are bundled directly into `dist/index.js` (and mirrored to `index.js`).
+* **Resolving `frontend_bundle not OK`**: If you ever encounter a loader error in Decky, ensure `dist/index.js` is present in `/home/deck/homebrew/plugins/OmniAchievements/`.
+
+### Checking Decky Loader Logs:
+If you need to inspect debug logs on your Legion Go / Steam Deck:
+```bash
+journalctl -u plugin_loader -b -f
+```
+Or view the plugin output in:
+```bash
+tail -f ~/.config/decky-loader/logs/OmniAchievements.log
+```

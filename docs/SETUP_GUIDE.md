@@ -52,6 +52,7 @@ Enter your **Master Password** to unlock the server and select or create your pl
 | `MASTER_PASSWORD` | Gateway password required to open the web version | `changeme123` |
 | `STEAM_API_KEY` | Valve Steam Web API Key for syncing games & achievements | `""` |
 | `STEAMGRIDDB_API_KEY` | API Key for 600x900 box art, hero banners and logos | `""` |
+| `GEMINI_API_KEY` | Google Gemini API Key for the AI Achievement Architect | `""` |
 | `JWT_SECRET` | Secret key used for signing session tokens | Auto-generated |
 | `DATA_DIR` | Directory where SQLite DB & config are persisted | `/app/data` |
 
