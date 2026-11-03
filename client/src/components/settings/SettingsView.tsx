@@ -20,7 +20,8 @@ import {
   Tag,
   Trash2,
   Edit3,
-  Plus
+  Plus,
+  Users
 } from 'lucide-react';
 import { NEUTRAL_AVATARS, getAvatarUrl, DEFAULT_AVATAR } from '../../utils/avatars.js';
 
@@ -59,6 +60,19 @@ export const SettingsView: React.FC = () => {
   const [editingPlatformName, setEditingPlatformName] = useState('');
   const [editingPlatformColor, setEditingPlatformColor] = useState('#3b82f6');
   const [platformMsg, setPlatformMsg] = useState<string | null>(null);
+
+  // Steam Family Sharing
+  const [familyAccounts, setFamilyAccounts] = useState<Array<{ name: string; steamId: string }>>(() => {
+    try {
+      return activeProfile?.family_steam_ids ? JSON.parse(activeProfile.family_steam_ids) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [newFamilyName, setNewFamilyName] = useState('');
+  const [newFamilySteamId, setNewFamilySteamId] = useState('');
+  const [isAddingFamily, setIsAddingFamily] = useState(false);
+  const [familyMsg, setFamilyMsg] = useState<string | null>(null);
 
   // Server settings fields
   const [serverSettings, setServerSettings] = useState<any | null>(null);
@@ -135,6 +149,57 @@ export const SettingsView: React.FC = () => {
       setPlatformMsg('✓ Console tag deleted.');
     } catch (err: any) {
       setPlatformMsg(`✕ Delete failed: ${err.message}`);
+    }
+  };
+
+  const handleAddFamilyAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFamilySteamId.trim() || !activeProfile) return;
+    setIsAddingFamily(true);
+    setFamilyMsg(null);
+    let resolvedId = newFamilySteamId.trim();
+
+    // If vanity URL, resolve it
+    if (!/^\d{17}$/.test(resolvedId)) {
+      try {
+        const res = await api.resolveSteamVanity(resolvedId);
+        resolvedId = res.steamId;
+      } catch (e) {}
+    }
+
+    const updated = [
+      ...familyAccounts.filter((f) => f.steamId !== resolvedId),
+      { name: newFamilyName.trim() || 'Family Member', steamId: resolvedId }
+    ];
+
+    try {
+      await api.updateProfile(activeProfile.id, {
+        family_steam_ids: JSON.stringify(updated)
+      });
+      setFamilyAccounts(updated);
+      setNewFamilyName('');
+      setNewFamilySteamId('');
+      await refreshActiveProfile();
+      setFamilyMsg('✓ Family account added! Run Steam Sync to import their games.');
+    } catch (err: any) {
+      setFamilyMsg(`✕ Failed: ${err.message}`);
+    } finally {
+      setIsAddingFamily(false);
+    }
+  };
+
+  const handleRemoveFamilyAccount = async (steamIdToRemove: string) => {
+    if (!activeProfile) return;
+    const updated = familyAccounts.filter((f) => f.steamId !== steamIdToRemove);
+    try {
+      await api.updateProfile(activeProfile.id, {
+        family_steam_ids: JSON.stringify(updated)
+      });
+      setFamilyAccounts(updated);
+      await refreshActiveProfile();
+      setFamilyMsg('✓ Family account removed.');
+    } catch (err: any) {
+      setFamilyMsg(`✕ Failed: ${err.message}`);
     }
   };
 
@@ -606,6 +671,119 @@ export const SettingsView: React.FC = () => {
           {platformMsg && (
             <p className={`text-xs font-semibold ${platformMsg.startsWith('✓') ? 'text-emerald-500' : 'text-rose-500'}`}>
               {platformMsg}
+            </p>
+          )}
+        </form>
+      </div>
+
+      {/* 3. Steam Family Sharing (Steam Families) */}
+      <div className="p-6 rounded-3xl glass dark:glass border border-purple-500/30 shadow-sm space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-slate-900 dark:text-white">
+              Steam Family Sharing (Steam Families)
+            </h3>
+            <p className="text-xs text-slate-400">
+              Add family members who share their Steam games with you to synchronize their libraries
+            </p>
+          </div>
+        </div>
+
+        {/* Informational Guidance Box */}
+        <div className="p-3.5 rounded-2xl bg-purple-950/20 border border-purple-500/30 text-xs text-slate-300 space-y-1.5">
+          <p className="font-semibold text-purple-300">
+            How Steam Family Sharing works with the Steam API:
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-400">
+            <li>
+              Valve's Steam API does <strong>not</strong> include borrowed family games when querying your own SteamID directly.
+            </li>
+            <li>
+              To import them, enter your family member's nickname and their <strong>17-digit SteamID64</strong> (or their Steam profile URL) below.
+            </li>
+            <li>
+              <strong>Crucial:</strong> Your family member's Steam profile <em>Privacy Settings &gt; Game details</em> must be set to <strong>Public</strong> so the Steam API is permitted to read their games.
+            </li>
+            <li>
+              OmniAchievements will pull all shared games, tag them with a purple <strong>Family Shared</strong> badge, and track <strong>your own</strong> unlocked achievements!
+            </li>
+          </ul>
+        </div>
+
+        {/* Existing Family Accounts */}
+        <div className="space-y-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
+            Configured Family Accounts ({familyAccounts.length}):
+          </span>
+
+          {familyAccounts.length === 0 ? (
+            <p className="text-xs text-slate-400 italic py-1">
+              No family accounts added yet. Add a family member below to import their shared games!
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {familyAccounts.map((fam) => (
+                <div
+                  key={fam.steamId}
+                  className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2"
+                >
+                  <div className="min-w-0">
+                    <span className="font-bold text-xs text-slate-900 dark:text-white block truncate">
+                      {fam.name}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono block truncate">
+                      {fam.steamId}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFamilyAccount(fam.steamId)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors shrink-0"
+                    title="Remove family account"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Add Family Account Form */}
+        <form onSubmit={handleAddFamilyAccount} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
+            Add Family Member:
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+            <input
+              type="text"
+              value={newFamilyName}
+              onChange={(e) => setNewFamilyName(e.target.value)}
+              placeholder="Nickname (e.g. Brother, Dad)"
+              className="sm:col-span-4 px-3 py-2 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400"
+            />
+            <input
+              type="text"
+              value={newFamilySteamId}
+              onChange={(e) => setNewFamilySteamId(e.target.value)}
+              placeholder="SteamID64 (17 digits) or Profile URL..."
+              className="sm:col-span-6 px-3 py-2 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400"
+            />
+            <button
+              type="submit"
+              disabled={isAddingFamily || !newFamilySteamId.trim()}
+              className="sm:col-span-2 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>{isAddingFamily ? 'Adding...' : 'Add'}</span>
+            </button>
+          </div>
+          {familyMsg && (
+            <p className={`text-xs font-semibold ${familyMsg.startsWith('✓') ? 'text-emerald-500' : 'text-rose-500'}`}>
+              {familyMsg}
             </p>
           )}
         </form>
