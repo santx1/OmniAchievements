@@ -173,6 +173,38 @@ To bump the version for a new release:
 
 ---
 
+## 📱 Installing on iPhone & iPad
+
+You have two equally great options for running OmniAchievements on your Apple devices:
+
+### Option A: Progressive Web App (PWA) — Zero Maintenance & Instant Updates (Recommended)
+Best if you want **zero 7-day certificate resigning** and **effortless automatic updates**:
+1. On your iPhone or iPad, open **Safari** and navigate to your home server address:
+   ```text
+   http://<YOUR_SERVER_IP>:3001
+   ```
+2. Tap the **Share** button (the square icon with the upward arrow) at the bottom or top of Safari.
+3. Scroll down and tap **"Add to Home Screen"**.
+4. Tap **Add** in the top right corner.
+5. Launch **OmniAchievements** directly from your Home Screen:
+   - Runs in full screen without browser URL bars or navigation buttons.
+   - Fully supports **offline IndexedDB caching** and automatic cloud sync.
+   - **Updates automatically**: whenever you update the server with `docker compose up -d`, opening the app immediately loads the newest version with zero manual file management.
+
+---
+
+### Option B: Native Sideloaded App (`.ipa`) — Standalone Offline Binary
+Best if you already use **SideStore**, **AltStore**, **TrollStore**, or **Sideloadly**, and want a **100% self-contained offline application bundle**:
+1. Download **`OmniAchievements.ipa`** directly from [GitHub Releases](https://github.com/santx1/OmniAchievements/releases).
+2. Open your sideloading tool (**SideStore**, **AltStore**, **TrollStore**, or **Sideloadly**) and install the `.ipa` file. *(Do NOT uncompress or extract this file)*.
+3. On first launch, expand the **Server Connection** panel on the login screen, enter your home server URL (`http://<YOUR_SERVER_IP>:3001`), and verify with **Test Connection**.
+4. Enter your Master Password to access your library.
+5. **Future Updates**: Sideloading the latest `.ipa` over the existing app performs an **in-place upgrade** with zero data loss.
+
+📖 Read the complete [iOS & iPadOS IPA Compilation & Installation Guide](docs/IOS_IPA_BUILD_GUIDE.md).
+
+---
+
 ## 🎮 Installing on Legion Go S & Steam Deck (Decky Plugin)
 
 1. Download **`OmniAchievements-Decky.zip`** from [GitHub Releases](https://github.com/santx1/OmniAchievements/releases).

@@ -4,6 +4,10 @@ OmniAchievements is built using **Capacitor**, allowing the exact same modern, r
 
 This guide provides the **easiest ways to compile the `.ipa` package** and install it on your iOS or iPadOS device.
 
+> [!TIP]
+> **Want a zero-maintenance alternative with no 7-day certificate resigning?**
+> You can install OmniAchievements instantly as a **Progressive Web App (PWA)**: open your server address (`http://<YOUR_SERVER_IP>:3001`) in **Safari** on your iPhone or iPad and tap **Share > Add to Home Screen**. It runs full-screen, caches your games offline via IndexedDB, and updates automatically whenever you update your server!
+
 ---
 
 ## ⚡ Method 1: Automated GitHub Actions & Direct Releases (Easiest - No Mac Required!)
