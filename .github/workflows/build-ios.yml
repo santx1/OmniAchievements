@@ -123,19 +123,18 @@ jobs:
           DECKY_PATH="decky-plugin/OmniAchievements-Decky.zip"
 
           RELEASE_TITLE="OmniAchievements v$VERSION"
-          RELEASE_NOTES="## 🎮 OmniAchievements v$VERSION
-
-### 📦 Release Downloads
-- 🍏 **\`OmniAchievements.ipa\`**: Native iOS & iPadOS application package. Ready to install with **SideStore**, **AltStore**, **TrollStore**, or **Sideloadly**. *(Do NOT uncompress this file)*
-- 🕹️ **\`OmniAchievements-Decky.zip\`**: SteamOS / Decky Loader plugin for Lenovo Legion Go & Steam Deck. Extract into \`~/homebrew/plugins/OmniAchievements\` and restart Decky. Supports 1-click in-Decky self-updating!
-
----
-
-### 🏷️ Version Scheme (a.b.c)
-- **\`a\`**: Main architecture version (current: \`0\`)
-- **\`b\`**: Major feature updates
-- **\`c\`**: Minor improvements and bug fixes
-"
+          
+          # Write clean release notes
+          echo "### 📦 Release Downloads" > release_notes.md
+          echo "- 🍏 **\`OmniAchievements.ipa\`**: Native iOS & iPadOS application package. Ready to install with **SideStore**, **AltStore**, **TrollStore**, or **Sideloadly**. *(Do NOT uncompress this file)*" >> release_notes.md
+          echo "- 🕹️ **\`OmniAchievements-Decky.zip\`**: SteamOS / Decky Loader plugin for Lenovo Legion Go & Steam Deck. Extract into \`~/homebrew/plugins/OmniAchievements\` and restart Decky. Supports 1-click in-Decky self-updating!" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "---" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### 🏷️ Version Scheme (a.b.c)" >> release_notes.md
+          echo "- **\`a\`**: Main architecture version (current: \`0\`)" >> release_notes.md
+          echo "- **\`b\`**: Major feature updates" >> release_notes.md
+          echo "- **\`c\`**: Minor improvements and bug fixes" >> release_notes.md
 
           # 1. Create or update the specific versioned release (e.g. v0.1.0)
           if gh release view "$TAG" >/dev/null 2>&1; then
@@ -145,7 +144,7 @@ jobs:
             echo "Creating new release $TAG..."
             gh release create "$TAG" "$IPA_PATH" "$DECKY_PATH" \
               --title "$RELEASE_TITLE" \
-              --notes "$RELEASE_NOTES" \
+              --notes-file release_notes.md \
               --latest
           fi
 
@@ -156,6 +155,6 @@ jobs:
             else
               gh release create "latest" "$IPA_PATH" "$DECKY_PATH" \
                 --title "OmniAchievements Latest" \
-                --notes "$RELEASE_NOTES"
+                --notes-file release_notes.md
             fi
           fi
