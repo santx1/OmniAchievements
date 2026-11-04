@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import { api } from '../../api/client.js';
 import { 
   ShieldCheck, 
@@ -14,11 +15,13 @@ import {
   AlertCircle, 
   ChevronDown, 
   ChevronUp, 
-  RefreshCw 
+  RefreshCw,
+  Globe
 } from 'lucide-react';
 
 export const MasterPasswordGate: React.FC = () => {
   const { loginMaster } = useAuth();
+  const { t, language, toggleLanguage } = useLanguage();
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +62,7 @@ export const MasterPasswordGate: React.FC = () => {
     if (!password.trim()) return;
 
     if (isNative && !serverUrl.trim()) {
-      setError('Please configure your OmniAchievements Server URL below (e.g. http://192.168.1.100:3001) to connect.');
+      setError(t('auth.serverUrlRequired'));
       setShowServerConfig(true);
       return;
     }
@@ -74,7 +77,7 @@ export const MasterPasswordGate: React.FC = () => {
     try {
       await loginMaster(password.trim());
     } catch (err: any) {
-      setError(err.message || 'Incorrect master password. Check your server config.');
+      setError(err.message || t('auth.incorrectPassword'));
       if (err.message && (err.message.includes('Server') || err.message.includes('connect') || err.message.includes('JSON') || err.message.includes('HTML'))) {
         setShowServerConfig(true);
       }
@@ -86,6 +89,17 @@ export const MasterPasswordGate: React.FC = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl overflow-y-auto">
       <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl glass-dark border border-slate-700/60 shadow-2xl relative overflow-hidden my-auto">
+        {/* Language switch button in top right */}
+        <button
+          type="button"
+          onClick={toggleLanguage}
+          className="absolute top-5 right-5 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/70 text-slate-300 hover:text-white text-xs font-semibold transition-all active:scale-95 shadow-sm"
+          title="Switch Language / Cambiar Idioma"
+        >
+          <Globe className="w-3.5 h-3.5 text-indigo-400" />
+          <span>{language === 'en' ? 'Español' : 'English'}</span>
+        </button>
+
         {/* Ambient background glow */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -94,16 +108,16 @@ export const MasterPasswordGate: React.FC = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 text-white shadow-glow mb-3">
             <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-white">OmniAchievements</h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1 font-medium">Universal Game & Achievement Hub</p>
+          <h1 className="text-2xl font-black tracking-tight text-white">{t('common.appName')}</h1>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1 font-medium">{t('common.tagline')}</p>
           
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs text-indigo-300 font-medium mt-2.5">
             <Server className="w-3.5 h-3.5" />
-            <span>{isNative ? 'iOS / iPadOS Native Client' : 'Local Network & Web Gateway'}</span>
+            <span>{isNative ? t('auth.gatewayBadgeNative') : t('auth.gatewayBadgeWeb')}</span>
           </div>
         </div>
 
-        {/* Server Connection Section (Essential for iOS app connecting to Docker/LAN server) */}
+        {/* Server Connection Section */}
         <div className="mb-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 overflow-hidden">
           <button
             type="button"
@@ -112,9 +126,9 @@ export const MasterPasswordGate: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <Wifi className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Server Connection:</span>
+              <span>{t('auth.serverConnection')}:</span>
               <span className="text-indigo-300 font-mono text-[11px] truncate max-w-[170px]">
-                {serverUrl.trim() || (isNative ? 'Not Configured' : 'Local Origin')}
+                {serverUrl.trim() || (isNative ? t('auth.notConfigured') : t('auth.localOrigin'))}
               </span>
             </div>
             {showServerConfig ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
@@ -123,9 +137,7 @@ export const MasterPasswordGate: React.FC = () => {
           {showServerConfig && (
             <div className="p-4 pt-1 border-t border-slate-800/60 space-y-3 bg-slate-950/40">
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                {isNative 
-                  ? 'Enter your computer or server local IP address where OmniAchievements is running in Docker.'
-                  : 'Specify the backend server address if accessing remotely or through a reverse proxy.'}
+                {isNative ? t('auth.serverHelpNative') : t('auth.serverHelpWeb')}
               </p>
 
               <div className="space-y-2">
@@ -134,7 +146,7 @@ export const MasterPasswordGate: React.FC = () => {
                     type="url"
                     value={serverUrl}
                     onChange={(e) => handleServerUrlChange(e.target.value)}
-                    placeholder="e.g. http://192.168.1.150:3001"
+                    placeholder={t('auth.serverUrlPlaceholder')}
                     className="flex-grow px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                   <button
@@ -146,7 +158,7 @@ export const MasterPasswordGate: React.FC = () => {
                     {isTesting ? (
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <span>Test</span>
+                      <span>{t('auth.testConnection')}</span>
                     )}
                   </button>
                 </div>
@@ -160,12 +172,12 @@ export const MasterPasswordGate: React.FC = () => {
                     {connectionStatus.online ? (
                       <>
                         <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                        <span>Connected to server! ({connectionStatus.latencyMs}ms latency)</span>
+                        <span>{t('auth.connectedSuccess')} ({t('auth.latency', { ms: connectionStatus.latencyMs || 0 })})</span>
                       </>
                     ) : (
                       <>
                         <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                        <span className="truncate">{connectionStatus.error || 'Server unreachable'}</span>
+                        <span className="truncate">{connectionStatus.error || t('auth.unreachable')}</span>
                       </>
                     )}
                   </div>
@@ -178,7 +190,7 @@ export const MasterPasswordGate: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-4 relative">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-              Master Server Password
+              {t('auth.masterPasswordTitle')}
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -188,7 +200,7 @@ export const MasterPasswordGate: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter master password..."
+                placeholder={t('auth.enterMasterPassword')}
                 autoFocus
                 className="w-full pl-11 pr-11 py-3.5 rounded-2xl bg-slate-900/80 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
@@ -217,7 +229,7 @@ export const MasterPasswordGate: React.FC = () => {
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
               <>
-                <span>Access Server</span>
+                <span>{t('auth.accessServer')}</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -227,7 +239,7 @@ export const MasterPasswordGate: React.FC = () => {
         <div className="mt-6 pt-5 border-t border-slate-800/80 text-center">
           <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
             <KeyRound className="w-3.5 h-3.5" />
-            <span>Configured in server <code className="text-slate-400 font-mono">.env</code> or <code className="text-slate-400 font-mono">config.json</code></span>
+            <span>{t('auth.configuredInServer')}</span>
           </div>
         </div>
       </div>

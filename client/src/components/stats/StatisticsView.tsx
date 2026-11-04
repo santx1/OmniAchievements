@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../api/client.js';
 import { StatsData } from '../../types/index.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import {
   Trophy,
   BarChart3,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 
 export const StatisticsView: React.FC = () => {
+  const { t, getAchievementText } = useLanguage();
   const [stats, setStats] = useState<StatsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -69,10 +71,10 @@ export const StatisticsView: React.FC = () => {
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
           <BarChart3 className="w-7 h-7 text-indigo-500" />
-          <span>Game & Achievement Analytics</span>
+          <span>{t('stats.title')}</span>
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Complete cross-platform breakdown of your gaming backlog and completion milestones
+          {t('stats.subtitle')}
         </p>
       </div>
 
@@ -84,7 +86,7 @@ export const StatisticsView: React.FC = () => {
             <Gamepad2 className="w-5 h-5" />
           </div>
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-            Total Games
+            {t('stats.totalGames')}
           </span>
           <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1 block">
             {summary.totalGames}
@@ -97,7 +99,7 @@ export const StatisticsView: React.FC = () => {
             <Trophy className="w-5 h-5" />
           </div>
           <span className="text-xs font-semibold text-amber-500 dark:text-amber-400 uppercase tracking-wider block">
-            100% Completed
+            {t('library.statusCompleted')}
           </span>
           <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1 block">
             {summary.completed100}
@@ -110,7 +112,7 @@ export const StatisticsView: React.FC = () => {
             <Sparkles className="w-5 h-5" />
           </div>
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-            Unlocked / Total
+            {t('stats.totalAchievements')}
           </span>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white">
@@ -128,10 +130,10 @@ export const StatisticsView: React.FC = () => {
             <Clock className="w-5 h-5" />
           </div>
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-            Logged Playtime
+            {t('stats.totalPlaytime')}
           </span>
           <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1 block">
-            {summary.totalPlaytimeHours} <span className="text-sm font-semibold text-slate-400">hours</span>
+            {summary.totalPlaytimeHours} <span className="text-sm font-semibold text-slate-400">{t('common.hours')}</span>
           </span>
         </div>
       </div>
@@ -299,13 +301,13 @@ export const StatisticsView: React.FC = () => {
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                <span>100% Hall of Fame</span>
+                <span>{t('stats.hallOfFame')}</span>
                 <span className="px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 text-xs font-black">
                   {hallOfFame.length}
                 </span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Games where you unlocked all achievements
+                {t('stats.hallOfFameSub')}
               </p>
             </div>
           </div>
@@ -313,7 +315,7 @@ export const StatisticsView: React.FC = () => {
 
         {hallOfFame.length === 0 ? (
           <div className="py-8 text-center text-slate-500 text-xs">
-            No 100% games completed yet. Keep hunting those achievements!
+            {t('stats.noCompletedGames')}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 pt-2">
@@ -349,42 +351,45 @@ export const StatisticsView: React.FC = () => {
         <div className="flex items-center gap-2">
           <Flame className="w-5 h-5 text-rose-500" />
           <h3 className="font-bold text-base text-slate-900 dark:text-white">
-            Recent Unlocks Activity
+            {t('stats.recentUnlocks')}
           </h3>
         </div>
 
         {recentAchievements.length === 0 ? (
           <div className="py-8 text-center text-slate-500 text-xs">
-            No recently unlocked achievements.
+            {t('stats.noRecentUnlocks')}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {recentAchievements.map((ach) => (
-              <div
-                key={ach.id}
-                className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 flex items-center gap-3"
-              >
-                <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-800 border border-slate-700 shrink-0 flex items-center justify-center">
-                  {ach.icon_unlocked ? (
-                    <img src={ach.icon_unlocked} alt={ach.display_name} className="w-full h-full object-cover" />
-                  ) : (
-                    <Trophy className="w-5 h-5 text-amber-400" />
-                  )}
-                </div>
+            {recentAchievements.map((ach) => {
+              const achText = getAchievementText(ach);
+              return (
+                <div
+                  key={ach.id}
+                  className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 flex items-center gap-3"
+                >
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-800 border border-slate-700 shrink-0 flex items-center justify-center">
+                    {ach.icon_unlocked ? (
+                      <img src={ach.icon_unlocked} alt={achText.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <Trophy className="w-5 h-5 text-amber-400" />
+                    )}
+                  </div>
 
-                <div className="min-w-0 flex-grow">
-                  <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                    {ach.display_name}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                    {ach.game_title}
-                  </p>
-                  <span className="text-[10px] text-indigo-500 font-mono">
-                    {ach.unlocked_at ? new Date(ach.unlocked_at).toLocaleDateString() : 'Recent'}
-                  </span>
+                  <div className="min-w-0 flex-grow">
+                    <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                      {achText.title}
+                    </h4>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      {ach.game_title}
+                    </p>
+                    <span className="text-[10px] text-indigo-500 font-mono">
+                      {ach.unlocked_at ? new Date(ach.unlocked_at).toLocaleDateString() : 'Recent'}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

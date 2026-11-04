@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Delete, X, Lock } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext.js';
 
 interface PinPadModalProps {
   title?: string;
@@ -11,13 +12,16 @@ interface PinPadModalProps {
 }
 
 export const PinPadModal: React.FC<PinPadModalProps> = ({
-  title = 'Enter 6-Digit PIN',
-  subtitle = 'Security verification',
+  title,
+  subtitle,
   isOpen,
   onClose,
   onSuccess,
   error: externalError
 }) => {
+  const { t } = useLanguage();
+  const displayTitle = title || t('profiles.enterPinSub');
+  const displaySubtitle = subtitle || t('profiles.enterPinSub');
   const [pin, setPin] = useState<string>('');
   const [shake, setShake] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -58,11 +62,11 @@ export const PinPadModal: React.FC<PinPadModalProps> = ({
         const ok = await onSuccess(newPin);
         if (ok === false) {
           triggerShake();
-          setErrorMessage('Incorrect PIN');
+          setErrorMessage(t('profiles.invalidPin'));
         }
       } catch (err: any) {
         triggerShake();
-        setErrorMessage(err.message || 'Incorrect PIN');
+        setErrorMessage(err.message || t('profiles.invalidPin'));
       } finally {
         setIsVerifying(false);
       }
@@ -116,8 +120,8 @@ export const PinPadModal: React.FC<PinPadModalProps> = ({
         </div>
 
         <div className="text-center mb-6">
-          <h2 className="text-xl font-bold text-white">{title}</h2>
-          <p className="text-xs text-slate-400 mt-1">{subtitle}</p>
+          <h2 className="text-xl font-bold text-white">{displayTitle}</h2>
+          <p className="text-xs text-slate-400 mt-1">{displaySubtitle}</p>
         </div>
 
         {/* 6 PIN Indicator Dots */}
@@ -163,7 +167,7 @@ export const PinPadModal: React.FC<PinPadModalProps> = ({
             disabled={isVerifying}
             className="h-14 rounded-2xl bg-slate-800/30 hover:bg-slate-800/60 text-slate-400 text-xs font-medium uppercase tracking-wider transition-all flex items-center justify-center"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
 
           <button

@@ -40,6 +40,8 @@ interface Achievement {
   id: string;
   display_name: string;
   description: string;
+  display_name_es?: string;
+  description_es?: string;
   icon_unlocked: string;
   icon_locked: string;
   is_unlocked: number;
@@ -400,10 +402,10 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
 
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: "12px", fontWeight: "bold", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {ach.display_name}
+                            {ach.display_name_es || ach.display_name}
                           </div>
                           <div style={{ fontSize: "10px", color: "#aaa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {ach.description}
+                            {ach.description_es || ach.description}
                           </div>
                         </div>
                       </div>

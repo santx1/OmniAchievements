@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import { PinPadModal } from './PinPadModal.js';
 import { Profile } from '../../types/index.js';
 import { api } from '../../api/client.js';
-import { Users, Plus, Shield, Sparkles, X, Check, Palette } from 'lucide-react';
+import { Users, Plus, Shield, Sparkles, X, Check, Palette, Globe } from 'lucide-react';
 import { ACCENT_PRESETS } from '../../context/ThemeContext.js';
 import { NEUTRAL_AVATARS, getAvatarUrl, DEFAULT_AVATAR } from '../../utils/avatars.js';
 
 export const ProfileSelector: React.FC = () => {
   const { profiles, selectProfileWithPin, loadProfiles } = useAuth();
+  const { language, toggleLanguage, t } = useLanguage();
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -85,14 +87,26 @@ export const ProfileSelector: React.FC = () => {
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
 
+      {/* Top right language switcher */}
+      <div className="absolute top-6 right-6 z-20">
+        <button
+          onClick={toggleLanguage}
+          title={language === 'en' ? 'Cambiar a Español' : 'Switch to English'}
+          className="px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800 text-slate-300 font-medium text-xs flex items-center gap-1.5 border border-slate-700/60 transition-colors shadow-sm"
+        >
+          <Globe className="w-3.5 h-3.5 text-indigo-400" />
+          <span>{language === 'en' ? 'Español' : 'English'}</span>
+        </button>
+      </div>
+
       <div className="w-full max-w-4xl z-10 text-center mb-10">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs font-semibold text-indigo-400 mb-4 shadow-sm">
           <Users className="w-4 h-4" />
-          <span>Multi-User Family Hub</span>
+          <span>OmniAchievements</span>
         </div>
-        <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white">Who is playing?</h1>
+        <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white">{t('profiles.selectProfile')}</h1>
         <p className="text-sm md:text-base text-slate-400 mt-2 font-normal">
-          Select your profile to synchronize your games, achievements, and stats
+          {t('profiles.selectProfileSub')}
         </p>
       </div>
 
@@ -139,7 +153,7 @@ export const ProfileSelector: React.FC = () => {
             <Plus className="w-8 h-8" />
           </div>
           <span className="font-semibold text-sm md:text-base text-slate-400 group-hover:text-white transition-colors">
-            Add Profile
+            {t('profiles.createNew')}
           </span>
         </button>
       </div>
@@ -148,8 +162,8 @@ export const ProfileSelector: React.FC = () => {
       <PinPadModal
         isOpen={isPinModalOpen}
         onClose={() => setIsPinModalOpen(false)}
-        title={`Unlock ${selectedProfile?.name || 'Profile'}`}
-        subtitle="Enter your 6-digit security PIN"
+        title={t('profiles.enterPin', { name: selectedProfile?.name || '' })}
+        subtitle={t('profiles.enterPinSub')}
         onSuccess={handlePinSubmit}
       />
 
@@ -162,7 +176,7 @@ export const ProfileSelector: React.FC = () => {
                 <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
                   <Sparkles className="w-5 h-5" />
                 </div>
-                <h2 className="text-xl font-bold text-white">Create Family Profile</h2>
+                <h2 className="text-xl font-bold text-white">{t('profiles.createTitle')}</h2>
               </div>
               <button
                 onClick={() => setIsCreateModalOpen(false)}
@@ -175,14 +189,14 @@ export const ProfileSelector: React.FC = () => {
             <form onSubmit={handleCreateProfile} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                  Name
+                  {t('profiles.profileName')}
                 </label>
                 <input
                   type="text"
                   required
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder="e.g. Alex, Maria, Dad..."
+                  placeholder={t('profiles.namePlaceholder')}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500"
                 />
               </div>
@@ -190,7 +204,7 @@ export const ProfileSelector: React.FC = () => {
               {/* Avatar Selection */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                  Choose Color Avatar
+                  {t('profiles.chooseAvatar')}
                 </label>
                 <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-2">
                   {NEUTRAL_AVATARS.map((av) => (
@@ -232,7 +246,7 @@ export const ProfileSelector: React.FC = () => {
                     type="url"
                     value={newAvatar.startsWith('data:') ? '' : newAvatar}
                     onChange={(e) => setNewAvatar(e.target.value.trim() || DEFAULT_AVATAR)}
-                    placeholder="Or paste custom image URL (https://...)"
+                    placeholder={t('profiles.customUrl')}
                     className="flex-1 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -241,7 +255,7 @@ export const ProfileSelector: React.FC = () => {
               {/* 6-Digit PIN Setter */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                  6-Digit Security PIN
+                  {t('profiles.sixDigitPin')}
                 </label>
                 <input
                   type="password"
@@ -254,7 +268,7 @@ export const ProfileSelector: React.FC = () => {
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm font-mono tracking-widest text-center focus:outline-none focus:border-indigo-500"
                 />
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Required to switch to this profile or edit settings.
+                  {t('profiles.pinHelp')}
                 </p>
               </div>
 
@@ -262,23 +276,23 @@ export const ProfileSelector: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Theme Mode
+                    {t('settings.themeModeLabel')}
                   </label>
                   <select
                     value={newTheme}
                     onChange={(e) => setNewTheme(e.target.value as any)}
                     className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-indigo-500"
                   >
-                    <option value="dark">Dark Mode</option>
-                    <option value="light">Light Mode</option>
-                    <option value="system">System Synchronized</option>
+                    <option value="dark">{t('settings.themeDark')}</option>
+                    <option value="light">{t('settings.themeLight')}</option>
+                    <option value="system">{t('settings.themeSystem')}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5 flex items-center gap-1">
                     <Palette className="w-3.5 h-3.5" />
-                    <span>Accent Color</span>
+                    <span>{t('profiles.accentColor')}</span>
                   </label>
                   <div className="flex items-center gap-1.5 pt-1">
                     {ACCENT_PRESETS.map((p) => (
@@ -300,7 +314,7 @@ export const ProfileSelector: React.FC = () => {
               {/* Optional Steam ID */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                  SteamID64 (Optional)
+                  SteamID64 ({t('common.optional')})
                 </label>
                 <input
                   type="text"
@@ -321,7 +335,7 @@ export const ProfileSelector: React.FC = () => {
                   disabled={isCreating}
                   className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-semibold text-sm transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50"
                 >
-                  {isCreating ? 'Creating...' : 'Create Profile'}
+                  {isCreating ? t('common.loading') : t('profiles.createBtn')}
                 </button>
               </div>
             </form>

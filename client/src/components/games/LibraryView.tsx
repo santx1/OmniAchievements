@@ -3,6 +3,7 @@ import { api } from '../../api/client.js';
 import { Game, Platform, GameStatus } from '../../types/index.js';
 import { GameCard } from './GameCard.js';
 import { GameDetailModal } from './GameDetailModal.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import {
   Search,
   Filter,
@@ -28,6 +29,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onOpenAddGame,
   onOpenSteamSync
 }) => {
+  const { t } = useLanguage();
   const [games, setGames] = useState<Game[]>([]);
   const [customPlatforms, setCustomPlatforms] = useState<CustomPlatform[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -99,13 +101,13 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
             <Gamepad2 className="w-7 h-7 text-indigo-500" />
-            <span>Game Library</span>
+            <span>{t('library.title')}</span>
             <span className="text-sm font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-full">
               {games.length}
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Universal backlog & achievements across Steam, PlayStation, Xbox, Switch & Emulators
+            {t('library.subtitle')}
           </p>
         </div>
 
@@ -117,7 +119,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search library..."
+              placeholder={t('library.searchPlaceholder')}
               className="w-full pl-9 pr-4 py-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 shadow-sm"
             />
           </form>
@@ -160,7 +162,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                 : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white'
             }`}
           >
-            All Platforms
+            {t('library.platformAll')}
           </button>
 
           {/* Family Shared Filter Pill */}
@@ -173,7 +175,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Family Shared</span>
+            <span>{t('library.familySharedBadge')}</span>
           </button>
 
           {customPlatforms.map((tab) => (
@@ -196,11 +198,11 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
           <div className="flex items-center gap-1.5 overflow-x-auto">
             {[
-              { id: 'all', label: 'All' },
-              { id: 'unplayed', label: 'Backlog (Unplayed)' },
-              { id: 'playing', label: 'Playing' },
-              { id: 'finished', label: 'Finished' },
-              { id: 'completed_100', label: '★ 100% Completed' }
+              { id: 'all', label: t('library.statusAll') },
+              { id: 'unplayed', label: t('library.statusBacklog') },
+              { id: 'playing', label: t('library.statusPlaying') },
+              { id: 'finished', label: t('library.statusFinished') },
+              { id: 'completed_100', label: t('library.statusCompleted') }
             ].map((st) => (
               <button
                 key={st.id}
@@ -229,10 +231,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               onChange={(e) => setSort(e.target.value)}
               className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none"
             >
-              <option value="last_played">Recently Played</option>
-              <option value="completion_desc">Highest Completion %</option>
-              <option value="playtime_desc">Most Playtime</option>
-              <option value="title_asc">Title (A - Z)</option>
+              <option value="last_played">{t('library.sortRecentlyPlayed')}</option>
+              <option value="completion_desc">{t('library.sortProgress')}</option>
+              <option value="playtime_desc">{t('library.sortPlaytime')}</option>
+              <option value="title_asc">{t('library.sortTitle')}</option>
               <option value="title_desc">Title (Z - A)</option>
             </select>
           </div>
@@ -243,17 +245,17 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       {isLoading ? (
         <div className="py-20 flex flex-col items-center justify-center text-slate-400">
           <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-sm font-medium">Loading your gaming universe...</p>
+          <p className="text-sm font-medium">{t('common.loading')}</p>
         </div>
       ) : games.length === 0 ? (
         <div className="py-20 text-center max-w-md mx-auto space-y-4">
           <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center mx-auto">
             <Gamepad2 className="w-8 h-8" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">No games found</h3>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">{t('library.noGamesFound')}</h3>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             {search || platform !== 'all' || status !== 'all'
-              ? 'Try adjusting your filters or search terms.'
+              ? t('library.noGamesSub')
               : 'Your library is empty. Sync with Steam to import your PC games or add console games manually.'}
           </p>
           <div className="flex items-center justify-center gap-3 pt-2">
@@ -262,14 +264,14 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
               className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Sync Steam</span>
+              <span>{t('nav.syncSteam')}</span>
             </button>
             <button
               onClick={onOpenAddGame}
               className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-1.5 transition-colors shadow-sm"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Add Game Manually</span>
+              <span>{t('nav.addGame')}</span>
             </button>
           </div>
         </div>

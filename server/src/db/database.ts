@@ -17,6 +17,7 @@ export function initDatabase() {
       pin_hash TEXT NOT NULL,
       theme TEXT DEFAULT 'dark',
       accent_color TEXT DEFAULT '#6366f1',
+      language TEXT DEFAULT 'en',
       steam_id TEXT DEFAULT '',
       steam_api_key TEXT DEFAULT '',
       retro_username TEXT DEFAULT '',
@@ -55,6 +56,8 @@ export function initDatabase() {
       api_name TEXT NOT NULL,
       display_name TEXT NOT NULL,
       description TEXT DEFAULT '',
+      display_name_es TEXT DEFAULT '',
+      description_es TEXT DEFAULT '',
       icon_unlocked TEXT DEFAULT '',
       icon_locked TEXT DEFAULT '',
       is_unlocked INTEGER DEFAULT 0,
@@ -124,6 +127,15 @@ export function initDatabase() {
   } catch (e) {}
   try {
     db.exec(`ALTER TABLE games ADD COLUMN family_owner TEXT DEFAULT ''`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE profiles ADD COLUMN language TEXT DEFAULT 'en'`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE achievements ADD COLUMN display_name_es TEXT DEFAULT ''`);
+  } catch (e) {}
+  try {
+    db.exec(`ALTER TABLE achievements ADD COLUMN description_es TEXT DEFAULT ''`);
   } catch (e) {}
   // Replace old Unsplash avatars with neutral avatar
   try {

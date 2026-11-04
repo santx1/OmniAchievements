@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../api/client.js';
 import confetti from 'canvas-confetti';
+import { useLanguage } from '../../context/LanguageContext.js';
 import {
   X,
   Sparkles,
@@ -20,7 +21,8 @@ import {
   ExternalLink,
   ChevronDown,
   Layers,
-  Palette
+  Palette,
+  Globe
 } from 'lucide-react';
 
 interface AiAchievementModalProps {
@@ -37,6 +39,12 @@ export interface GeneratedAchievement {
   apiName: string;
   displayName: string;
   description: string;
+  displayName_es?: string;
+  description_es?: string;
+  localizations?: {
+    en?: { displayName?: string; description?: string };
+    es?: { displayName?: string; description?: string };
+  };
   tier: 'bronze' | 'silver' | 'gold' | 'platinum' | 'obsidian';
   points: number;
   category: 'story' | 'combat' | 'exploration' | 'mastery' | 'secret';
@@ -67,6 +75,7 @@ export const AiAchievementModal: React.FC<AiAchievementModalProps> = ({
   onAchievementsApplied,
   onAchievementsGenerated
 }) => {
+  const { language, t, getAchievementText } = useLanguage();
   // Generation parameters
   const [title, setTitle] = useState(gameTitle);
   const [gamePlatform, setGamePlatform] = useState(platform);
@@ -76,6 +85,7 @@ export const AiAchievementModal: React.FC<AiAchievementModalProps> = ({
   const [style, setStyle] = useState<'canonical' | 'witty' | 'speedrun' | 'lore'>('canonical');
   const [apiKey, setApiKey] = useState(localStorage.getItem('omni_gemini_api_key') || '');
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
+  const [previewLang, setPreviewLang] = useState<'en' | 'es'>(language);
 
   // Results & UI State
   const [isGenerating, setIsGenerating] = useState(false);
@@ -165,15 +175,37 @@ export const AiAchievementModal: React.FC<AiAchievementModalProps> = ({
 
     const pack = {
       $schema: 'https://omniachievements.app/schema/v1/achievements.json',
-      formatVersion: '1.0',
+      formatVersion: '1.1',
       gameTitle: title,
       platform: gamePlatform,
       genre,
       totalAchievements: achievements.length,
       totalPoints: achievements.reduce((sum, a) => sum + (a.points || 15), 0),
-      generatedBy: 'OmniAchievements AI Generator',
+      generatedBy: 'OmniAchievements AI Generator (Bilingual EN/ES)',
       createdAt: new Date().toISOString(),
-      achievements
+      supportedLanguages: ['en', 'es'],
+      achievements: achievements.map((a) => ({
+        apiName: a.apiName,
+        displayName: a.displayName,
+        description: a.description,
+        displayName_es: a.displayName_es || a.localizations?.es?.displayName || a.displayName,
+        description_es: a.description_es || a.localizations?.es?.description || a.description,
+        localizations: a.localizations || {
+          en: { displayName: a.displayName, description: a.description },
+          es: {
+            displayName: a.displayName_es || a.displayName,
+            description: a.description_es || a.description
+          }
+        },
+        tier: a.tier,
+        points: a.points,
+        category: a.category,
+        iconSymbol: a.iconSymbol,
+        iconColor: a.iconColor,
+        secret: a.secret,
+        iconUnlocked: a.iconUnlocked,
+        iconLocked: a.iconLocked
+      }))
     };
 
     const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' });
@@ -195,10 +227,37 @@ export const AiAchievementModal: React.FC<AiAchievementModalProps> = ({
         const data = JSON.parse(event.target?.result as string);
         const list = Array.isArray(data) ? data : data.achievements;
         if (Array.isArray(list) && list.length > 0) {
-          setAchievements(list);
+          const normalized: GeneratedAchievement[] = list.map((item: any, idx: number) => {
+            const enTitle = item.displayName || item.display_name || item.localizations?.en?.displayName || `Achievement ${idx + 1}`;
+            const enDesc = item.description || item.localizations?.en?.description || '';
+            const esTitle = item.displayName_es || item.display_name_es || item.localizations?.es?.displayName || enTitle;
+            const esDesc = item.description_es || item.localizations?.es?.description || enDesc;
+
+            return {
+              apiName: item.apiName || item.api_name || `ACH_${idx + 1}`,
+              displayName: enTitle,
+              description: enDesc,
+              displayName_es: esTitle,
+              description_es: esDesc,
+              localizations: {
+                en: { displayName: enTitle, description: enDesc },
+                es: { displayName: esTitle, description: esDesc }
+              },
+              tier: item.tier || 'bronze',
+              points: item.points || 15,
+              category: item.category || 'story',
+              iconSymbol: item.iconSymbol || item.icon_symbol || 'trophy',
+              iconColor: item.iconColor || item.icon_color || '#6366f1',
+              secret: !!item.secret,
+              iconUnlocked: item.iconUnlocked || item.icon_unlocked,
+              iconLocked: item.iconLocked || item.icon_locked
+            };
+          });
+
+          setAchievements(normalized);
           if (data.gameTitle) setTitle(data.gameTitle);
           if (data.platform) setGamePlatform(data.platform);
-          setSuccessMessage(`✓ Imported ${list.length} achievements from file!`);
+          setSuccessMessage(`✓ Imported ${normalized.length} bilingual achievements from file!`);
         } else {
           setErrorMessage('Invalid file: no achievements array found.');
         }
@@ -212,8 +271,16 @@ export const AiAchievementModal: React.FC<AiAchievementModalProps> = ({
   const handleCopyPrompt = () => {
     const promptText = `Please generate an official, lore-accurate, and engaging achievement list for the video game "${title}" (${gamePlatform}, Genre: ${genre}).
 Generate ${count} achievements with difficulty ${difficulty} and style ${style}.
+CRITICAL BILINGUAL REQUIREMENT:
+Provide BOTH English and Spanish localizations for every achievement:
+- displayName (in English)
+- description (in English)
+- displayName_es (in authentic Spanish gamer terminology)
+- description_es (in authentic Spanish)
+- localizations: {"en": {"displayName": "...", "description": "..."}, "es": {"displayName": "...", "description": "..."}}
+
 Return ONLY a valid JSON array of objects with keys:
-apiName, displayName, description, tier ("bronze"|"silver"|"gold"|"platinum"|"obsidian"), points (10 to 100), category ("story"|"combat"|"exploration"|"mastery"|"secret"), iconSymbol (one of sword, shield, trophy, crown, skull, star, compass, scroll, flame, gem, heart, key, lightning, potion, dice, feather, planet), iconColor (hex code), secret (boolean).`;
+apiName, displayName, description, displayName_es, description_es, localizations, tier ("bronze"|"silver"|"gold"|"platinum"|"obsidian"), points (10 to 100), category ("story"|"combat"|"exploration"|"mastery"|"secret"), iconSymbol (one of sword, shield, trophy, crown, skull, star, compass, scroll, flame, gem, heart, key, lightning, potion, dice, feather, planet), iconColor (hex code), secret (boolean).`;
 
     navigator.clipboard.writeText(promptText);
     setCopiedPrompt(true);
@@ -255,14 +322,14 @@ apiName, displayName, description, tier ("bronze"|"silver"|"gold"|"platinum"|"ob
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
-                  AI Achievement Architect
+                  {t('ai.modalTitle')}
                 </h2>
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                  Google Gemini 2.5 Flash
+                  {t('ai.bilingualBadge')}
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Generate canon achievements with creative vector badge artwork & export as <code className="text-indigo-300">.omniachievements.json</code>
+                {t('ai.modalSub')}
               </p>
             </div>
           </div>
@@ -476,23 +543,53 @@ apiName, displayName, description, tier ("bronze"|"silver"|"gold"|"platinum"|"ob
           {/* Generated Achievements List Preview */}
           {achievements.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
                   <Layers className="w-4 h-4 text-indigo-400" />
                   <span>
-                    Achievements Pack ({achievements.length} trophies,{' '}
-                    {achievements.reduce((sum, a) => sum + (a.points || 15), 0)} pts)
+                    {t('ai.previewTitle', {
+                      count: achievements.length,
+                      points: achievements.reduce((sum, a) => sum + (a.points || 15), 0)
+                    })}
                   </span>
                 </span>
-                <span className="text-[11px] text-slate-500">
-                  Click badge or title to customize
-                </span>
+
+                {/* Bilingual Preview Switcher */}
+                <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                  <Globe className="w-3.5 h-3.5 text-indigo-400 ml-1" />
+                  <span className="text-[10px] text-slate-400 px-1">{t('ai.previewLangToggle')}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewLang('en')}
+                    className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-colors ${
+                      previewLang === 'en' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    English
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewLang('es')}
+                    className={`px-2 py-0.5 rounded-lg text-xs font-bold transition-colors ${
+                      previewLang === 'es' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Español
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                 {achievements.map((ach, idx) => {
                   const isEditingThis = editingIdx === idx;
                   const tierStyle = getTierColor(ach.tier);
+
+                  const displayedTitle = previewLang === 'es' && (ach.displayName_es || ach.localizations?.es?.displayName)
+                    ? (ach.displayName_es || ach.localizations?.es?.displayName)
+                    : ach.displayName;
+                  const displayedDesc = previewLang === 'es' && (ach.description_es || ach.localizations?.es?.description)
+                    ? (ach.description_es || ach.localizations?.es?.description)
+                    : ach.description;
 
                   return (
                     <div
@@ -508,7 +605,7 @@ apiName, displayName, description, tier ("bronze"|"silver"|"gold"|"platinum"|"ob
                       >
                         <img
                           src={ach.iconUnlocked}
-                          alt={ach.displayName}
+                          alt={displayedTitle}
                           className="w-full h-full object-contain"
                         />
                         <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover/badge:opacity-100 flex items-center justify-center text-white text-[9px] font-bold transition-opacity">
@@ -555,18 +652,41 @@ apiName, displayName, description, tier ("bronze"|"silver"|"gold"|"platinum"|"ob
 
                         {isEditingThis ? (
                           <div className="space-y-2 mt-2 pt-2 border-t border-slate-800">
-                            <input
-                              type="text"
-                              value={ach.displayName}
-                              onChange={(e) => updateAchievement(idx, { displayName: e.target.value })}
-                              className="w-full px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white"
-                            />
-                            <textarea
-                              rows={2}
-                              value={ach.description}
-                              onChange={(e) => updateAchievement(idx, { description: e.target.value })}
-                              className="w-full px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white"
-                            />
+                            <div>
+                              <label className="text-[10px] text-slate-400 font-bold block mb-0.5">Title (EN):</label>
+                              <input
+                                type="text"
+                                value={ach.displayName}
+                                onChange={(e) => updateAchievement(idx, { displayName: e.target.value })}
+                                className="w-full px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white mb-1"
+                              />
+                              <label className="text-[10px] text-slate-400 font-bold block mb-0.5">Título (ES):</label>
+                              <input
+                                type="text"
+                                value={ach.displayName_es || ''}
+                                onChange={(e) => updateAchievement(idx, { displayName_es: e.target.value })}
+                                placeholder="Nombre en español..."
+                                className="w-full px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] text-slate-400 font-bold block mb-0.5">Description (EN):</label>
+                              <textarea
+                                rows={2}
+                                value={ach.description}
+                                onChange={(e) => updateAchievement(idx, { description: e.target.value })}
+                                className="w-full px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white mb-1"
+                              />
+                              <label className="text-[10px] text-slate-400 font-bold block mb-0.5">Descripción (ES):</label>
+                              <textarea
+                                rows={2}
+                                value={ach.description_es || ''}
+                                onChange={(e) => updateAchievement(idx, { description_es: e.target.value })}
+                                placeholder="Descripción en español..."
+                                className="w-full px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white"
+                              />
+                            </div>
 
                             {/* Badge Symbol Chooser */}
                             <div>
@@ -594,10 +714,10 @@ apiName, displayName, description, tier ("bronze"|"silver"|"gold"|"platinum"|"ob
                         ) : (
                           <>
                             <h4 className="font-bold text-xs text-white line-clamp-1">
-                              {ach.displayName}
+                              {displayedTitle}
                             </h4>
                             <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">
-                              {ach.description}
+                              {displayedDesc}
                             </p>
                           </>
                         )}
@@ -630,7 +750,7 @@ apiName, displayName, description, tier ("bronze"|"silver"|"gold"|"platinum"|"ob
               onClick={onClose}
               className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
             >
-              Close
+              {t('common.close')}
             </button>
 
             {gameId && achievements.length > 0 && (
@@ -641,7 +761,7 @@ apiName, displayName, description, tier ("bronze"|"silver"|"gold"|"platinum"|"ob
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-indigo-600/30 disabled:opacity-50"
               >
                 {isApplying ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                <span>{isApplying ? 'Applying...' : `Apply ${achievements.length} Achievements`}</span>
+                <span>{isApplying ? t('ai.applying') : `${t('ai.applyToGameBtn')} (${achievements.length})`}</span>
               </button>
             )}
 
@@ -655,7 +775,7 @@ apiName, displayName, description, tier ("bronze"|"silver"|"gold"|"platinum"|"ob
                 className="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-indigo-600/30"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Attach {achievements.length} Achievements to New Game</span>
+                <span>{t('ai.applyToGameBtn')} ({achievements.length})</span>
               </button>
             )}
           </div>

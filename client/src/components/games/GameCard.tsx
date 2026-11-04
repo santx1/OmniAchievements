@@ -1,5 +1,6 @@
 import React from 'react';
 import { Game } from '../../types/index.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import { Trophy, Clock, Users } from 'lucide-react';
 
 interface GameCardProps {
@@ -10,6 +11,7 @@ interface GameCardProps {
 }
 
 export const GameCard: React.FC<GameCardProps> = ({ game, onClick, platformColor, platformName }) => {
+  const { t } = useLanguage();
   const percentage = game.total_achievements > 0
     ? Math.round((game.unlocked_achievements / game.total_achievements) * 100)
     : 0;
@@ -43,14 +45,14 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onClick, platformColor
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'completed_100':
-        return { label: '100% Completed', bg: 'bg-amber-500 text-slate-950 font-bold' };
+        return { label: t('library.statusCompleted'), bg: 'bg-amber-500 text-slate-950 font-bold' };
       case 'finished':
-        return { label: 'Finished', bg: 'bg-emerald-500/80 text-white font-medium' };
+        return { label: t('library.statusFinished'), bg: 'bg-emerald-500/80 text-white font-medium' };
       case 'playing':
-        return { label: 'Playing', bg: 'bg-indigo-600/85 text-white font-medium' };
+        return { label: t('library.statusPlaying'), bg: 'bg-indigo-600/85 text-white font-medium' };
       case 'unplayed':
       default:
-        return { label: 'Backlog', bg: 'bg-slate-900/80 text-slate-300 font-medium' };
+        return { label: t('library.statusBacklog'), bg: 'bg-slate-900/80 text-slate-300 font-medium' };
     }
   };
 
@@ -101,10 +103,10 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onClick, platformColor
             {isFamilyShared && (
               <span
                 className="px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-purple-600/90 text-white backdrop-blur-md flex items-center gap-0.5 shadow-sm"
-                title={game.family_owner ? `Family Shared by ${game.family_owner}` : 'Family Shared'}
+                title={game.family_owner ? `Family Shared by ${game.family_owner}` : t('library.familySharedBadge')}
               >
                 <Users className="w-2.5 h-2.5" />
-                <span className="hidden sm:inline">Shared</span>
+                <span className="hidden sm:inline">{t('library.familySharedBadge')}</span>
               </span>
             )}
           </div>
@@ -127,7 +129,7 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onClick, platformColor
         {game.playtime_minutes > 0 && (
           <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1 text-[11px] font-medium text-slate-300 drop-shadow">
             <Clock className="w-3 h-3 text-slate-400" />
-            <span>{hours} hrs</span>
+            <span>{t('gameCard.playtime', { hours })}</span>
           </div>
         )}
       </div>

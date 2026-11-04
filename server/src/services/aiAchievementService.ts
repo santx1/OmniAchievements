@@ -25,6 +25,12 @@ export interface GeneratedAchievement {
   apiName: string;
   displayName: string;
   description: string;
+  displayName_es?: string;
+  description_es?: string;
+  localizations?: {
+    en: { displayName: string; description: string };
+    es: { displayName: string; description: string };
+  };
   tier: AchievementTier;
   points: number;
   category: 'story' | 'combat' | 'exploration' | 'mastery' | 'secret';
@@ -290,7 +296,7 @@ export class AiAchievementService {
     apiKey: string
   ): Promise<GeneratedAchievement[]> {
     const prompt = `
-You are an expert game designer, historian, and trophy architect.
+You are an expert game designer, historian, and bilingual trophy architect.
 Create an official, exciting, and authentic achievement/trophy list for the video game "${gameTitle}" (${platform}, Genre: ${genre}).
 
 Requirements:
@@ -301,13 +307,26 @@ Requirements:
    ['sword', 'shield', 'trophy', 'crown', 'skull', 'star', 'compass', 'scroll', 'flame', 'gem', 'heart', 'key', 'lightning', 'potion', 'dice', 'feather', 'planet']
 5. Assign a distinct hex accent color (e.g. #3b82f6, #10b981, #f59e0b, #ef4444, #8b5cf6, #06b6d4, #ec4899).
 6. Tiers must be distributed: ~50% bronze (10-15 pts), ~30% silver (25-30 pts), ~15% gold (50-75 pts), ~5% platinum/obsidian (100 pts).
+7. BILINGUAL LOCALIZATIONS: Every single achievement MUST provide full titles and descriptions in BOTH English ('en') and Spanish ('es'). Use natural, idiomatically accurate gamer terminology in Spanish.
 
 Respond ONLY with a valid JSON array of objects adhering to this schema:
 [
   {
     "apiName": "unique_snake_case_id",
-    "displayName": "Clever Achievement Title",
-    "description": "Clear condition on how to unlock this achievement",
+    "displayName": "Clever Achievement Title in English",
+    "description": "Clear condition on how to unlock this achievement in English",
+    "displayName_es": "Título ingenioso del logro en español",
+    "description_es": "Condición clara de cómo desbloquear este logro en español",
+    "localizations": {
+      "en": {
+        "displayName": "Clever Achievement Title in English",
+        "description": "Clear condition on how to unlock this achievement in English"
+      },
+      "es": {
+        "displayName": "Título ingenioso del logro en español",
+        "description": "Condición clara de cómo desbloquear este logro en español"
+      }
+    },
     "tier": "bronze" | "silver" | "gold" | "platinum" | "obsidian",
     "points": 15,
     "category": "story" | "combat" | "exploration" | "mastery" | "secret",
@@ -352,7 +371,24 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
       throw new Error('Gemini response was not a JSON array');
     }
 
-    return parsed;
+    return parsed.map((item: any) => {
+      const enTitle = item.displayName || item.localizations?.en?.displayName || 'Achievement';
+      const enDesc = item.description || item.localizations?.en?.description || '';
+      const esTitle = item.displayName_es || item.localizations?.es?.displayName || enTitle;
+      const esDesc = item.description_es || item.localizations?.es?.description || enDesc;
+
+      return {
+        ...item,
+        displayName: enTitle,
+        description: enDesc,
+        displayName_es: esTitle,
+        description_es: esDesc,
+        localizations: {
+          en: { displayName: enTitle, description: enDesc },
+          es: { displayName: esTitle, description: esDesc }
+        }
+      };
+    });
   }
 
   /**
@@ -369,6 +405,12 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
         apiName: `${this.slugify(gameTitle)}_first_steps`,
         displayName: 'First Steps',
         description: `Complete the tutorial or prologue in ${gameTitle}.`,
+        displayName_es: 'Primeros Pasos',
+        description_es: `Completa el tutorial o prólogo en ${gameTitle}.`,
+        localizations: {
+          en: { displayName: 'First Steps', description: `Complete the tutorial or prologue in ${gameTitle}.` },
+          es: { displayName: 'Primeros Pasos', description: `Completa el tutorial o prólogo en ${gameTitle}.` }
+        },
         tier: 'bronze',
         points: 10,
         category: 'story',
@@ -380,6 +422,12 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
         apiName: `${this.slugify(gameTitle)}_first_blood`,
         displayName: 'Proof of Mettle',
         description: 'Defeat your first major enemy or boss encounter.',
+        displayName_es: 'Prueba de Temple',
+        description_es: 'Derrota a tu primer enemigo importante o jefe.',
+        localizations: {
+          en: { displayName: 'Proof of Mettle', description: 'Defeat your first major enemy or boss encounter.' },
+          es: { displayName: 'Prueba de Temple', description: 'Derrota a tu primer enemigo importante o jefe.' }
+        },
         tier: 'bronze',
         points: 15,
         category: 'combat',
@@ -391,6 +439,12 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
         apiName: `${this.slugify(gameTitle)}_explorer`,
         displayName: 'Uncharted Territory',
         description: 'Discover your first hidden area or secret cache.',
+        displayName_es: 'Territorio Desconocido',
+        description_es: 'Descubre tu primera zona oculta o alijo secreto.',
+        localizations: {
+          en: { displayName: 'Uncharted Territory', description: 'Discover your first hidden area or secret cache.' },
+          es: { displayName: 'Territorio Desconocido', description: 'Descubre tu primera zona oculta o alijo secreto.' }
+        },
         tier: 'bronze',
         points: 15,
         category: 'exploration',
@@ -402,6 +456,12 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
         apiName: `${this.slugify(gameTitle)}_halfway_there`,
         displayName: 'Point of No Return',
         description: 'Reach the midpoint of the main quest or narrative.',
+        displayName_es: 'Punto de No Retorno',
+        description_es: 'Alcanza el punto medio de la trama principal.',
+        localizations: {
+          en: { displayName: 'Point of No Return', description: 'Reach the midpoint of the main quest or narrative.' },
+          es: { displayName: 'Punto de No Retorno', description: 'Alcanza el punto medio de la trama principal.' }
+        },
         tier: 'silver',
         points: 30,
         category: 'story',
@@ -413,6 +473,12 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
         apiName: `${this.slugify(gameTitle)}_arsenal`,
         displayName: 'Armed to the Teeth',
         description: 'Acquire all core equipment, abilities, or weapon upgrades.',
+        displayName_es: 'Armado Hasta los Dientes',
+        description_es: 'Consigue todo el equipamiento clave, habilidades o mejoras de armas.',
+        localizations: {
+          en: { displayName: 'Armed to the Teeth', description: 'Acquire all core equipment, abilities, or weapon upgrades.' },
+          es: { displayName: 'Armado Hasta los Dientes', description: 'Consigue todo el equipamiento clave, habilidades o mejoras de armas.' }
+        },
         tier: 'silver',
         points: 30,
         category: 'mastery',
@@ -424,6 +490,12 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
         apiName: `${this.slugify(gameTitle)}_speedy`,
         displayName: 'Adrenaline Rush',
         description: 'Clear a challenging stage or boss without taking critical damage.',
+        displayName_es: 'Subidón de Adrenalina',
+        description_es: 'Supera una fase desafiante o jefe sin sufrir daños críticos.',
+        localizations: {
+          en: { displayName: 'Adrenaline Rush', description: 'Clear a challenging stage or boss without taking critical damage.' },
+          es: { displayName: 'Subidón de Adrenalina', description: 'Supera una fase desafiante o jefe sin sufrir daños críticos.' }
+        },
         tier: 'silver',
         points: 35,
         category: 'combat',
@@ -435,6 +507,12 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
         apiName: `${this.slugify(gameTitle)}_treasure`,
         displayName: 'Deep Pockets',
         description: 'Collect 100% of the collectible treasures or special tokens.',
+        displayName_es: 'Bolsillos Llenos',
+        description_es: 'Consigue el 100% de los tesoros coleccionables o fichas especiales.',
+        localizations: {
+          en: { displayName: 'Deep Pockets', description: 'Collect 100% of the collectible treasures or special tokens.' },
+          es: { displayName: 'Bolsillos Llenos', description: 'Consigue el 100% de los tesoros coleccionables o fichas especiales.' }
+        },
         tier: 'gold',
         points: 50,
         category: 'exploration',
@@ -446,6 +524,12 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
         apiName: `${this.slugify(gameTitle)}_conqueror`,
         displayName: 'Legendary Champion',
         description: `Defeat the final boss and view the end credits of ${gameTitle}.`,
+        displayName_es: 'Campeón Legendario',
+        description_es: `Derrota al jefe final y contempla los créditos de ${gameTitle}.`,
+        localizations: {
+          en: { displayName: 'Legendary Champion', description: `Defeat the final boss and view the end credits of ${gameTitle}.` },
+          es: { displayName: 'Campeón Legendario', description: `Derrota al jefe final y contempla los créditos de ${gameTitle}.` }
+        },
         tier: 'gold',
         points: 75,
         category: 'story',
@@ -457,6 +541,12 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
         apiName: `${this.slugify(gameTitle)}_secret_lore`,
         displayName: 'Keeper of Secrets',
         description: 'Uncover the optional secret post-game dungeon or hidden boss.',
+        displayName_es: 'Guardián de Secretos',
+        description_es: 'Descubre la mazmorra secreta opcional o jefe oculto posterior al juego.',
+        localizations: {
+          en: { displayName: 'Keeper of Secrets', description: 'Uncover the optional secret post-game dungeon or hidden boss.' },
+          es: { displayName: 'Guardián de Secretos', description: 'Descubre la mazmorra secreta opcional o jefe oculto posterior al juego.' }
+        },
         tier: 'obsidian',
         points: 90,
         category: 'secret',
@@ -468,6 +558,12 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
         apiName: `${this.slugify(gameTitle)}_perfection`,
         displayName: 'Absolute Completion',
         description: `Unlock all other achievements in ${gameTitle}. A true masterpiece achieved!`,
+        displayName_es: 'Perfección Absoluta',
+        description_es: `Desbloquea todos los demás logros en ${gameTitle}. ¡Una auténtica obra maestra!`,
+        localizations: {
+          en: { displayName: 'Absolute Completion', description: `Unlock all other achievements in ${gameTitle}. A true masterpiece achieved!` },
+          es: { displayName: 'Perfección Absoluta', description: `Desbloquea todos los demás logros en ${gameTitle}. ¡Una auténtica obra maestra!` }
+        },
         tier: 'platinum',
         points: 100,
         category: 'mastery',
@@ -486,6 +582,12 @@ Respond ONLY with a valid JSON array of objects adhering to this schema:
         apiName: `${this.slugify(gameTitle)}_milestone_${num}`,
         displayName: `Heroic Feat #${num}`,
         description: `Overcome stage challenge ${num} with skill and finesse in ${gameTitle}.`,
+        displayName_es: `Proeza Heroica #${num}`,
+        description_es: `Supera el desafío de fase ${num} con destreza y maestría en ${gameTitle}.`,
+        localizations: {
+          en: { displayName: `Heroic Feat #${num}`, description: `Overcome stage challenge ${num} with skill and finesse in ${gameTitle}.` },
+          es: { displayName: `Proeza Heroica #${num}`, description: `Supera el desafío de fase ${num} con destreza y maestría en ${gameTitle}.` }
+        },
         tier: num % 5 === 0 ? 'gold' : num % 2 === 0 ? 'silver' : 'bronze',
         points: num % 5 === 0 ? 50 : 25,
         category: 'mastery',

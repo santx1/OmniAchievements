@@ -1,10 +1,10 @@
 {
   "name": "omniachievements-decky",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Decky Loader plugin for OmniAchievements",
   "scripts": {
-    "build": "esbuild src/index.tsx --bundle --format=esm --external:react --external:react-dom --external:decky-frontend-lib --external:@decky/ui --external:@decky/api --target=es2020 --outfile=dist/index.js && cp dist/index.js ./index.js",
-    "watch": "esbuild src/index.tsx --bundle --format=esm --external:react --external:react-dom --external:decky-frontend-lib --external:@decky/ui --external:@decky/api --target=es2020 --outfile=dist/index.js --watch"
+    "build": "npx esbuild src/index.tsx --bundle --format=esm --external:react --external:react-dom --external:decky-frontend-lib --external:@decky/ui --external:@decky/api --target=es2020 --outfile=dist/index.js && cp dist/index.js ./index.js",
+    "watch": "npx esbuild src/index.tsx --bundle --format=esm --external:react --external:react-dom --external:decky-frontend-lib --external:@decky/ui --external:@decky/api --target=es2020 --outfile=dist/index.js --watch"
   },
   "dependencies": {
     "@decky/ui": "^4.0.0",

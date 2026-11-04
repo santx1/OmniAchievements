@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../../api/client.js';
 import { Platform, GameStatus, CustomPlatform } from '../../types/index.js';
 import { AiAchievementModal } from '../achievements/AiAchievementModal.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import {
   X,
   Search,
@@ -26,6 +27,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
   onClose,
   onGameAdded
 }) => {
+  const { t } = useLanguage();
   const [title, setTitle] = useState('');
   const [platform, setPlatform] = useState<Platform>('playstation');
   const [customPlatforms, setCustomPlatforms] = useState<CustomPlatform[]>([]);
@@ -187,8 +189,8 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
               <Gamepad2 className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Add Game to Library</h2>
-              <p className="text-xs text-slate-400">PlayStation, Xbox, Switch, Emulators, PC & More</p>
+              <h2 className="text-xl font-bold text-white">{t('addGame.title')}</h2>
+              <p className="text-xs text-slate-400">{t('addGame.subtitle')}</p>
             </div>
           </div>
           <button
@@ -203,7 +205,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           {/* Platform Selector */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-              Platform / Console Tag
+              {t('addGame.platformLabel')}
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {customPlatforms.map((p) => (
@@ -235,7 +237,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
               />
               <span className="flex items-center gap-1">
                 <Users className="w-3.5 h-3.5 text-purple-400" />
-                <span>Mark as Family Shared Game</span>
+                <span>{t('library.familySharedBadge')}</span>
               </span>
             </label>
 
@@ -253,7 +255,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           {/* Title and SteamGridDB Search */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-2">
-              Game Title & Artwork Search
+              {t('addGame.gameTitleLabel')}
             </label>
             <div className="flex gap-2">
               <input
@@ -261,7 +263,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
                 required
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Bloodborne, The Legend of Zelda, Halo..."
+                placeholder={t('addGame.gameTitlePlaceholder')}
                 className="flex-grow px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500"
               />
               <button
@@ -417,23 +419,23 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                Initial Status
+                {t('addGame.statusLabel')}
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as GameStatus)}
                 className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-white"
               >
-                <option value="unplayed">Backlog (Unplayed)</option>
-                <option value="playing">Playing</option>
-                <option value="finished">Finished</option>
-                <option value="completed_100">100% Completed</option>
+                <option value="unplayed">{t('library.statusBacklog')}</option>
+                <option value="playing">{t('library.statusPlaying')}</option>
+                <option value="finished">{t('library.statusFinished')}</option>
+                <option value="completed_100">{t('library.statusCompleted')}</option>
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-                Playtime (Hours)
+                {t('addGame.playtimeLabel')}
               </label>
               <input
                 type="number"
@@ -454,7 +456,7 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
               disabled={isSubmitting}
               className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold text-sm transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50"
             >
-              {isSubmitting ? 'Adding Game...' : 'Save Game to Library'}
+              {isSubmitting ? t('common.saving') : t('addGame.submitBtn')}
             </button>
           </div>
         </form>
@@ -473,6 +475,9 @@ export const AddGameModal: React.FC<AddGameModalProps> = ({
                 api_name: a.apiName,
                 display_name: a.displayName,
                 description: a.description,
+                display_name_es: a.displayName_es,
+                description_es: a.description_es,
+                localizations: a.localizations,
                 icon_unlocked: a.iconUnlocked,
                 icon_locked: a.iconLocked
               }))

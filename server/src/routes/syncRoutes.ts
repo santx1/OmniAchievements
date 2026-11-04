@@ -15,7 +15,7 @@ router.get('/pull', (req: AuthenticatedProfileRequest, res: Response) => {
   const profileId = req.profileId!;
   const since = req.query.since as string | undefined;
 
-  const profile = db.prepare('SELECT id, name, avatar, theme, accent_color, steam_id, family_steam_ids, created_at, updated_at FROM profiles WHERE id = ?').get(profileId);
+  const profile = db.prepare('SELECT id, name, avatar, theme, accent_color, language, steam_id, family_steam_ids, created_at, updated_at FROM profiles WHERE id = ?').get(profileId);
 
   let gamesQuery = 'SELECT * FROM games WHERE profile_id = ?';
   let achQuery = 'SELECT * FROM achievements WHERE profile_id = ?';

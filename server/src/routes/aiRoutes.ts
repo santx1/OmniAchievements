@@ -64,8 +64,8 @@ router.post('/apply', (req: AuthenticatedProfileRequest, res: Response) => {
     INSERT INTO achievements (
       id, game_id, profile_id, api_name, display_name, description,
       icon_unlocked, icon_locked, is_unlocked, progress_current, progress_max,
-      created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 100, ?, ?)
+      created_at, updated_at, display_name_es, description_es
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 100, ?, ?, ?, ?)
   `);
 
   let addedCount = 0;
@@ -80,6 +80,9 @@ router.post('/apply', (req: AuthenticatedProfileRequest, res: Response) => {
     const iconUnlocked = ach.iconUnlocked || AiAchievementService.generateBadgeSvg(symbol, tier, color, true);
     const iconLocked = ach.iconLocked || AiAchievementService.generateBadgeSvg(symbol, tier, color, false);
 
+    const displayNameEs = ach.displayName_es || ach.localizations?.es?.displayName || '';
+    const descriptionEs = ach.description_es || ach.localizations?.es?.description || '';
+
     try {
       insertStmt.run(
         achId,
@@ -91,7 +94,9 @@ router.post('/apply', (req: AuthenticatedProfileRequest, res: Response) => {
         iconUnlocked,
         iconLocked,
         now,
-        now
+        now,
+        displayNameEs,
+        descriptionEs
       );
       addedCount++;
     } catch (e: any) {

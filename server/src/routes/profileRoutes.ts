@@ -16,7 +16,7 @@ router.use(masterAuth);
  */
 router.get('/', (req: Request, res: Response) => {
   const profiles = db.prepare(`
-    SELECT id, name, avatar, theme, accent_color, steam_id, retro_username, family_steam_ids, created_at, updated_at
+    SELECT id, name, avatar, theme, accent_color, language, steam_id, retro_username, family_steam_ids, created_at, updated_at
     FROM profiles
     ORDER BY created_at ASC
   `).all();
@@ -28,7 +28,7 @@ router.get('/', (req: Request, res: Response) => {
  * Create a new profile
  */
 router.post('/', (req: Request, res: Response) => {
-  const { name, avatar, pin, theme, accent_color, steam_id } = req.body;
+  const { name, avatar, pin, theme, accent_color, language, steam_id } = req.body;
 
   if (!name || name.trim().length === 0) {
     return res.status(400).json({ error: 'Profile name is required' });
@@ -46,8 +46,8 @@ router.post('/', (req: Request, res: Response) => {
   const defaultAvatar = avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
 
   db.prepare(`
-    INSERT INTO profiles (id, name, avatar, pin_hash, theme, accent_color, steam_id, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO profiles (id, name, avatar, pin_hash, theme, accent_color, language, steam_id, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     name.trim(),
@@ -55,12 +55,13 @@ router.post('/', (req: Request, res: Response) => {
     pinHash,
     theme || 'dark',
     accent_color || '#6366f1',
+    language || 'en',
     steam_id ? steam_id.trim() : '',
     now,
     now
   );
 
-  const created = db.prepare('SELECT id, name, avatar, theme, accent_color, steam_id, created_at FROM profiles WHERE id = ?').get(id);
+  const created = db.prepare('SELECT id, name, avatar, theme, accent_color, language, steam_id, created_at FROM profiles WHERE id = ?').get(id);
   res.status(201).json({ profile: created });
 });
 
@@ -134,6 +135,7 @@ router.put('/:id', (req: Request, res: Response) => {
     currentPin,
     theme,
     accent_color,
+    language,
     steam_id,
     steam_api_key,
     retro_username,
@@ -166,6 +168,7 @@ router.put('/:id', (req: Request, res: Response) => {
   const updatedAvatar = avatar !== undefined ? avatar : profile.avatar;
   const updatedTheme = theme !== undefined ? theme : profile.theme;
   const updatedAccent = accent_color !== undefined ? accent_color : profile.accent_color;
+  const updatedLanguage = language !== undefined ? language : (profile.language || 'en');
   const updatedSteamId = steam_id !== undefined ? steam_id.trim() : profile.steam_id;
   const updatedApiKey = steam_api_key !== undefined ? steam_api_key.trim() : profile.steam_api_key;
   const updatedRetroUser = retro_username !== undefined ? retro_username.trim() : (profile.retro_username || '');
@@ -180,6 +183,7 @@ router.put('/:id', (req: Request, res: Response) => {
       pin_hash = ?,
       theme = ?,
       accent_color = ?,
+      language = ?,
       steam_id = ?,
       steam_api_key = ?,
       retro_username = ?,
@@ -193,6 +197,7 @@ router.put('/:id', (req: Request, res: Response) => {
     newPinHash,
     updatedTheme,
     updatedAccent,
+    updatedLanguage,
     updatedSteamId,
     updatedApiKey,
     updatedRetroUser,
@@ -203,7 +208,7 @@ router.put('/:id', (req: Request, res: Response) => {
   );
 
   const updatedProfile = db.prepare(`
-    SELECT id, name, avatar, theme, accent_color, steam_id, retro_username, family_steam_ids, created_at, updated_at
+    SELECT id, name, avatar, theme, accent_color, language, steam_id, retro_username, family_steam_ids, created_at, updated_at
     FROM profiles WHERE id = ?
   `).get(id);
 

@@ -85,6 +85,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const found = res.profiles.find((p) => p.id === storedProfileId);
         if (found && api.getProfileToken()) {
           setActiveProfile(found);
+          if (found.language) {
+            localStorage.setItem('omni_language', found.language);
+          }
         }
       }
     } catch (err) {

@@ -15,6 +15,7 @@ export interface Profile {
   avatar: string;
   theme: 'dark' | 'light' | 'system';
   accent_color: string;
+  language?: 'en' | 'es';
   steam_id: string;
   retro_username?: string;
   retro_api_key?: string;
@@ -55,6 +56,12 @@ export interface Achievement {
   api_name: string;
   display_name: string;
   description: string;
+  display_name_es?: string;
+  description_es?: string;
+  localizations?: {
+    en: { displayName: string; description: string };
+    es: { displayName: string; description: string };
+  };
   icon_unlocked: string;
   icon_locked: string;
   is_unlocked: number;

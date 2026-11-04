@@ -1,8 +1,9 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useTheme } from '../../context/ThemeContext.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import { useSyncStatus } from '../../utils/syncEngine.js';
-import { Trophy, RefreshCw, Sun, Moon, Laptop, Plus, LogOut, Settings as SettingsIcon, Cloud, CloudOff, CloudUpload } from 'lucide-react';
+import { Trophy, RefreshCw, Sun, Moon, Laptop, Plus, LogOut, Settings as SettingsIcon, Cloud, CloudOff, CloudUpload, Globe } from 'lucide-react';
 import { getAvatarUrl } from '../../utils/avatars.js';
 
 interface NavbarProps {
@@ -18,12 +19,27 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { activeProfile, lockProfile } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { language, toggleLanguage, t } = useLanguage();
   const { syncState, pendingCount, triggerSync } = useSyncStatus();
 
   const cycleTheme = () => {
     if (theme === 'dark') setTheme('light');
     else if (theme === 'light') setTheme('system');
     else setTheme('dark');
+  };
+
+  const getSyncTooltip = () => {
+    if (syncState === 'syncing') return t('nav.syncStatusSyncing');
+    if (syncState === 'offline') return t('nav.syncStatusOffline');
+    if (pendingCount > 0) return t('nav.syncStatusPending', { count: pendingCount });
+    return t('nav.syncStatusSynced');
+  };
+
+  const getSyncLabel = () => {
+    if (syncState === 'syncing') return t('nav.syncStatusSyncing');
+    if (syncState === 'offline') return t('common.offline');
+    if (pendingCount > 0) return t('nav.syncStatusPending', { count: pendingCount });
+    return t('nav.syncStatusSynced');
   };
 
   return (
@@ -50,15 +66,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => triggerSync()}
             disabled={syncState === 'syncing'}
-            title={
-              syncState === 'syncing'
-                ? 'Syncing with cloud...'
-                : syncState === 'offline'
-                ? 'Offline mode: all changes saved locally and will sync when reconnected'
-                : pendingCount > 0
-                ? `${pendingCount} changes saved locally pending cloud sync. Click to sync now.`
-                : 'All changes synchronized with cloud. Click to force sync.'
-            }
+            title={getSyncTooltip()}
             className={`px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all border ${
               syncState === 'syncing'
                 ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
@@ -79,40 +87,44 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Cloud className="w-3.5 h-3.5" />
             )}
             <span className="hidden sm:inline font-mono text-[11px]">
-              {syncState === 'syncing'
-                ? 'Syncing...'
-                : syncState === 'offline'
-                ? 'Offline'
-                : pendingCount > 0
-                ? `${pendingCount} queued`
-                : 'Cloud Synced'}
+              {getSyncLabel()}
             </span>
           </button>
 
           {/* Quick Steam Sync */}
           <button
             onClick={onOpenSteamSync}
-            title="Synchronize Steam Library"
+            title={t('nav.syncSteamLibrary')}
             className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium text-xs flex items-center gap-1.5 transition-colors border border-slate-300/40 dark:border-slate-700/60"
           >
             <RefreshCw className="w-4 h-4 text-indigo-500" />
-            <span className="hidden md:inline">Sync Steam</span>
+            <span className="hidden md:inline">{t('nav.syncSteam')}</span>
           </button>
 
           {/* Add Game Button */}
           <button
             onClick={onOpenAddGame}
-            title="Manually Add Game"
+            title={t('nav.addCustomGame')}
             className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-medium text-xs flex items-center gap-1.5 transition-all shadow-sm shadow-indigo-600/30"
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Add Game</span>
+            <span className="hidden sm:inline">{t('nav.addGame')}</span>
+          </button>
+
+          {/* Language Switcher Pill */}
+          <button
+            onClick={toggleLanguage}
+            title={language === 'en' ? 'Cambiar a Español' : 'Switch to English'}
+            className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 transition-colors border border-slate-300/40 dark:border-slate-700/60"
+          >
+            <Globe className="w-3.5 h-3.5 text-indigo-500" />
+            <span className="font-mono text-xs font-bold">{language === 'en' ? 'ES' : 'EN'}</span>
           </button>
 
           {/* Theme Mode Toggle */}
           <button
             onClick={cycleTheme}
-            title={`Current theme: ${theme} (Click to change)`}
+            title={`Current theme: ${theme}`}
             className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors border border-slate-300/40 dark:border-slate-700/60"
           >
             {theme === 'dark' ? (
@@ -127,7 +139,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Settings Button */}
           <button
             onClick={onOpenSettings}
-            title="Settings & Integrations"
+            title={t('nav.settings')}
             className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors border border-slate-300/40 dark:border-slate-700/60"
           >
             <SettingsIcon className="w-4 h-4" />
@@ -138,7 +150,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="flex items-center gap-2 pl-2 border-l border-slate-300 dark:border-slate-800">
               <button
                 onClick={lockProfile}
-                title="Switch Profile / Lock"
+                title={t('profiles.switchProfile')}
                 className="group flex items-center gap-2 p-1 sm:pr-2.5 rounded-full bg-slate-100 dark:bg-slate-800/60 hover:bg-slate-200 dark:hover:bg-slate-700/80 border border-slate-300/50 dark:border-slate-700 transition-colors"
               >
                 <img

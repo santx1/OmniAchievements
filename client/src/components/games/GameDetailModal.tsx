@@ -3,6 +3,7 @@ import { Game, Achievement, GameStatus } from '../../types/index.js';
 import { api } from '../../api/client.js';
 import confetti from 'canvas-confetti';
 import { AiAchievementModal } from '../achievements/AiAchievementModal.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import {
   X,
   Trophy,
@@ -39,6 +40,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
   onGameUpdated,
   onGameDeleted
 }) => {
+  const { language, t, getAchievementText } = useLanguage();
   const [game, setGame] = useState<Game | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [filter, setFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
@@ -321,9 +323,12 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
     if (filter === 'locked' && a.is_unlocked === 1) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
+      const achText = getAchievementText(a);
       return (
-        a.display_name.toLowerCase().includes(q) ||
-        a.description.toLowerCase().includes(q)
+        achText.title.toLowerCase().includes(q) ||
+        achText.description.toLowerCase().includes(q) ||
+        (a.display_name && a.display_name.toLowerCase().includes(q)) ||
+        (a.description && a.description.toLowerCase().includes(q))
       );
     }
     return true;
@@ -397,18 +402,18 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                     {is100Percent && (
                       <span className="px-2.5 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider bg-amber-500/30 text-amber-300 border border-amber-500/50 flex items-center gap-1">
                         <Trophy className="w-3 h-3 text-amber-400" />
-                        <span>100% Completed</span>
+                        <span>{t('library.statusCompleted')}</span>
                       </span>
                     )}
                     {game.is_family_shared === 1 && (
                       <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-purple-600/30 text-purple-300 border border-purple-500/40 flex items-center gap-1">
                         <Users className="w-3 h-3" />
-                        <span>Family Shared {game.family_owner ? `by ${game.family_owner}` : ''}</span>
+                        <span>{t('library.familySharedBadge')} {game.family_owner ? `(${game.family_owner})` : ''}</span>
                       </span>
                     )}
                     {game.is_custom === 1 && (
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
-                        Custom Added
+                        Custom
                       </span>
                     )}
                   </div>
@@ -420,7 +425,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                   <div className="flex items-center gap-4 mt-2 text-xs text-slate-300">
                     <div className="flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{(playtimeMinutes / 60).toFixed(1)} hours played</span>
+                      <span>{t('gameCard.playtime', { hours: (playtimeMinutes / 60).toFixed(1) })}</span>
                     </div>
 
                     <div className="flex items-center gap-1.5">
@@ -438,16 +443,16 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
             <div className="p-4 bg-slate-900/80 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 shrink-0">
               {/* Status Selector */}
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-400">Status:</span>
+                <span className="text-xs font-semibold text-slate-400">{t('gameDetail.statusLabel')}:</span>
                 <select
                   value={currentStatus}
                   onChange={(e) => handleStatusChange(e.target.value as GameStatus)}
                   className="px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500"
                 >
-                  <option value="unplayed">Backlog (Unplayed)</option>
-                  <option value="playing">Playing</option>
-                  <option value="finished">Finished</option>
-                  <option value="completed_100">100% Completed</option>
+                  <option value="unplayed">{t('library.statusBacklog')}</option>
+                  <option value="playing">{t('library.statusPlaying')}</option>
+                  <option value="finished">{t('library.statusFinished')}</option>
+                  <option value="completed_100">{t('library.statusCompleted')}</option>
                 </select>
               </div>
 
@@ -460,7 +465,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                   title="Generate canon achievements & vector badges with Google Gemini AI"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>AI Achievements</span>
+                  <span>{t('ai.modalTitle')}</span>
                 </button>
 
                 <button
@@ -470,7 +475,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                   title="Choose custom box art & banners from SteamGridDB"
                 >
                   <Palette className="w-3.5 h-3.5" />
-                  <span>Custom Artwork</span>
+                  <span>{t('gameDetail.artworkTab')}</span>
                 </button>
 
                 <button
@@ -478,7 +483,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                   className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-medium text-slate-200 flex items-center gap-1.5 transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Add Achievement</span>
+                  <span>{t('common.add', { defaultValue: 'Add Achievement' })}</span>
                 </button>
 
                 <button
@@ -493,7 +498,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 <button
                   onClick={() => setIsDeleteConfirmOpen(true)}
                   className="p-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors"
-                  title="Delete game from library"
+                  title={t('gameDetail.deleteGame')}
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -504,7 +509,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
             <div className="p-4 pb-2 border-b border-slate-800/60 flex flex-wrap items-center justify-between gap-3 shrink-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm text-white flex items-center gap-2">
-                  <span>Achievements</span>
+                  <span>{t('gameDetail.achievementsTab')}</span>
                   <span className="px-2 py-0.5 rounded-full bg-slate-800 text-xs text-indigo-400 font-semibold">
                     {game.unlocked_achievements}/{game.total_achievements}
                   </span>
@@ -519,7 +524,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                     type="text"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search achievements..."
+                    placeholder={t('common.search')}
                     className="w-full pl-8 pr-3 py-1 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                   />
                 </div>
@@ -532,7 +537,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                       filter === 'all' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    All
+                    {t('common.all')}
                   </button>
                   <button
                     onClick={() => setFilter('unlocked')}
@@ -540,7 +545,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                       filter === 'unlocked' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Unlocked
+                    {t('gameDetail.filterUnlocked', { count: game.unlocked_achievements }).split(' ')[0]}
                   </button>
                   <button
                     onClick={() => setFilter('locked')}
@@ -548,7 +553,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                       filter === 'locked' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    Locked
+                    {t('gameDetail.filterLocked', { count: game.total_achievements - game.unlocked_achievements }).split(' ')[0]}
                   </button>
                 </div>
               </div>
@@ -570,6 +575,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                   const iconUrl = isUnlocked
                     ? ach.icon_unlocked || ach.icon_locked
                     : ach.icon_locked || ach.icon_unlocked;
+                  const achText = getAchievementText(ach);
 
                   return (
                     <div
@@ -587,7 +593,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                           {iconUrl ? (
                             <img
                               src={iconUrl}
-                              alt={ach.display_name}
+                              alt={achText.title}
                               className={`w-full h-full object-cover transition-all ${
                                 !isUnlocked ? 'grayscale brightness-75' : ''
                               }`}
@@ -612,14 +618,14 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                               isUnlocked ? 'text-white' : 'text-slate-400'
                             }`}
                           >
-                            {ach.display_name}
+                            {achText.title}
                           </h4>
                           <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">
-                            {ach.description || 'No description provided'}
+                            {achText.description || t('gameDetail.secretDescription')}
                           </p>
                           {isUnlocked && ach.unlocked_at && (
                             <p className="text-[10px] text-indigo-400 mt-1 font-mono">
-                              Unlocked: {new Date(ach.unlocked_at).toLocaleDateString()}
+                              {t('gameDetail.unlockedAt', { date: new Date(ach.unlocked_at).toLocaleDateString() })}
                             </p>
                           )}
                         </div>
@@ -926,9 +932,9 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
               <AlertTriangle className="w-6 h-6" />
             </div>
 
-            <h3 className="text-xl font-bold text-white mb-2">Delete "{game.title}"?</h3>
+            <h3 className="text-xl font-bold text-white mb-2">{t('gameDetail.deleteConfirmTitle')}</h3>
             <p className="text-sm text-slate-400 mb-4">
-              Are you sure you want to remove this game and all tracked achievements from your library?
+              {t('gameDetail.deleteConfirmMessage', { title: game.title })}
             </p>
 
             {/* Blacklist Option for Free Bloat Games */}
@@ -959,7 +965,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 onClick={() => setIsDeleteConfirmOpen(false)}
                 className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="button"
@@ -967,7 +973,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({
                 onClick={handleDeleteGame}
                 className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-colors shadow-lg shadow-rose-600/30 disabled:opacity-50"
               >
-                {isDeleting ? 'Deleting...' : 'Delete Game'}
+                {isDeleting ? t('common.deleting', { defaultValue: 'Deleting...' }) : t('gameDetail.deleteGame')}
               </button>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import { api } from '../../api/client.js';
 import { BlacklistManagerModal } from './BlacklistManagerModal.js';
 import {
@@ -27,6 +28,7 @@ export const SteamSyncModal: React.FC<SteamSyncModalProps> = ({
   onClose,
   onSyncComplete
 }) => {
+  const { t } = useLanguage();
   const { activeProfile, refreshActiveProfile } = useAuth();
   const [steamId, setSteamId] = useState(activeProfile?.steam_id || '');
   const [vanityInput, setVanityInput] = useState('');
@@ -141,8 +143,8 @@ export const SteamSyncModal: React.FC<SteamSyncModalProps> = ({
                 <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">Steam Synchronization</h2>
-                <p className="text-xs text-slate-400">Import games, achievements & playtime</p>
+                <h2 className="text-xl font-bold text-white">{t('steam.syncModalTitle')}</h2>
+                <p className="text-xs text-slate-400">{t('steam.syncModalSub')}</p>
               </div>
             </div>
             <button
@@ -313,12 +315,12 @@ export const SteamSyncModal: React.FC<SteamSyncModalProps> = ({
                 {isSyncing ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Synchronizing Library & Achievements...</span>
+                    <span>{t('steam.syncingStatus', { current: '...', total: '...' })}</span>
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4" />
-                    <span>Start Steam Sync</span>
+                    <span>{t('steam.syncNowBtn')}</span>
                   </>
                 )}
               </button>

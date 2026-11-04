@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../api/client.js';
 import { BlacklistItem } from '../../types/index.js';
+import { useLanguage } from '../../context/LanguageContext.js';
 import { X, ShieldAlert, Undo2, Trash2 } from 'lucide-react';
 
 interface BlacklistManagerModalProps {
@@ -9,6 +10,7 @@ interface BlacklistManagerModalProps {
 }
 
 export const BlacklistManagerModal: React.FC<BlacklistManagerModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useLanguage();
   const [blacklist, setBlacklist] = useState<BlacklistItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -50,8 +52,8 @@ export const BlacklistManagerModal: React.FC<BlacklistManagerModalProps> = ({ is
               <ShieldAlert className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">Ignored & Bloatware Games</h2>
-              <p className="text-xs text-slate-400">Skipped automatically during Steam synchronizations</p>
+              <h2 className="text-lg font-bold text-white">{t('steam.blacklistTitle')}</h2>
+              <p className="text-xs text-slate-400">{t('steam.blacklistSub')}</p>
             </div>
           </div>
           <button
@@ -71,10 +73,7 @@ export const BlacklistManagerModal: React.FC<BlacklistManagerModalProps> = ({ is
           ) : blacklist.length === 0 ? (
             <div className="py-12 text-center text-slate-500">
               <Trash2 className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              <p className="text-xs">No games are currently blacklisted.</p>
-              <p className="text-[11px] text-slate-600 mt-1">
-                When you delete a free or bloatware Steam game with the blacklist checkbox enabled, it will appear here so it's never re-imported!
-              </p>
+              <p className="text-xs">{t('steam.noBlacklistedGames')}</p>
             </div>
           ) : (
             blacklist.map((item) => (
@@ -90,11 +89,11 @@ export const BlacklistManagerModal: React.FC<BlacklistManagerModalProps> = ({ is
 
                 <button
                   onClick={() => handleRestore(item.steam_app_id)}
-                  title="Restore game to sync list"
+                  title={t('steam.unblockGame')}
                   className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1 transition-colors border border-slate-700 shrink-0"
                 >
                   <Undo2 className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Restore</span>
+                  <span>{t('steam.unblockGame')}</span>
                 </button>
               </div>
             ))
