@@ -21,9 +21,16 @@ import {
   Trash2,
   Edit3,
   Plus,
-  Users
+  Users,
+  Cloud,
+  CloudOff,
+  CloudUpload,
+  HardDrive,
+  RefreshCw
 } from 'lucide-react';
 import { NEUTRAL_AVATARS, getAvatarUrl, DEFAULT_AVATAR } from '../../utils/avatars.js';
+import { useSyncStatus } from '../../utils/syncEngine.js';
+import { offlineStore } from '../../utils/offlineStore.js';
 
 export const SettingsView: React.FC = () => {
   const { activeProfile, refreshActiveProfile } = useAuth();
@@ -88,10 +95,42 @@ export const SettingsView: React.FC = () => {
   const [isGeneratingPairToken, setIsGeneratingPairToken] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
 
+  // Cloud Sync & Offline Storage
+  const { syncState, isOnline, pendingCount, lastSyncTime, triggerSync } = useSyncStatus();
+  const [storageSummary, setStorageSummary] = useState<any>(null);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+  const [isManualSyncing, setIsManualSyncing] = useState(false);
+
   useEffect(() => {
     loadServerSettings();
     loadPlatforms();
-  }, []);
+    loadStorageSummary();
+  }, [activeProfile?.id]);
+
+  useEffect(() => {
+    loadStorageSummary();
+  }, [syncState, pendingCount]);
+
+  const loadStorageSummary = async () => {
+    if (activeProfile?.id) {
+      const summary = await offlineStore.getStorageSummary(activeProfile.id);
+      setStorageSummary(summary);
+    }
+  };
+
+  const handleTriggerManualSync = async () => {
+    setIsManualSyncing(true);
+    setSyncMsg('Synchronizing with cloud server...');
+    try {
+      const res = await triggerSync();
+      setSyncMsg(res.message);
+      await loadStorageSummary();
+    } catch (e: any) {
+      setSyncMsg(`Sync error: ${e.message}`);
+    } finally {
+      setIsManualSyncing(false);
+    }
+  };
 
   const loadPlatforms = async () => {
     setIsLoadingPlatforms(true);
@@ -821,6 +860,83 @@ export const SettingsView: React.FC = () => {
             </p>
           )}
         </form>
+      </div>
+
+      {/* Local Offline Storage & Cloud Synchronization */}
+      <div className="p-6 rounded-3xl glass dark:glass border border-slate-200/50 dark:border-slate-800/80 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${
+              syncState === 'syncing' ? 'bg-blue-500/10 text-blue-500' :
+              syncState === 'offline' ? 'bg-slate-500/10 text-slate-500' :
+              pendingCount > 0 ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'
+            }`}>
+              {syncState === 'syncing' ? <RefreshCw className="w-5 h-5 animate-spin" /> :
+               syncState === 'offline' ? <CloudOff className="w-5 h-5" /> :
+               pendingCount > 0 ? <CloudUpload className="w-5 h-5" /> : <Cloud className="w-5 h-5" />}
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                <span>Local Storage & Cloud Synchronization</span>
+                <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
+                  isOnline ? 'bg-emerald-500/15 text-emerald-500' : 'bg-slate-500/15 text-slate-400'
+                }`}>
+                  {isOnline ? 'Online' : 'Offline Mode'}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Data is saved locally in IndexedDB and automatically synchronized when connected
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleTriggerManualSync}
+            disabled={isManualSyncing || !isOnline}
+            className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm shrink-0"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isManualSyncing ? 'animate-spin' : ''}`} />
+            <span>{isManualSyncing ? 'Syncing...' : 'Sync Cloud Now'}</span>
+          </button>
+        </div>
+
+        {/* Status Metrics Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+          <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800">
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Local Games</span>
+            <span className="text-lg font-black text-slate-900 dark:text-white font-mono">
+              {storageSummary?.gamesCount ?? '—'}
+            </span>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800">
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Local Trophies</span>
+            <span className="text-lg font-black text-slate-900 dark:text-white font-mono">
+              {storageSummary?.achievementsCount ?? '—'}
+            </span>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800">
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Pending Sync</span>
+            <span className={`text-lg font-black font-mono ${pendingCount > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
+              {pendingCount} changes
+            </span>
+          </div>
+
+          <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800">
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Last Cloud Sync</span>
+            <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300 block truncate">
+              {lastSyncTime ? new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Never'}
+            </span>
+          </div>
+        </div>
+
+        {syncMsg && (
+          <p className={`text-xs font-semibold ${syncMsg.includes('error') || syncMsg.includes('failed') ? 'text-rose-500' : 'text-emerald-500'}`}>
+            {syncMsg}
+          </p>
+        )}
       </div>
 
       {/* Server URL & Network Connectivity */}

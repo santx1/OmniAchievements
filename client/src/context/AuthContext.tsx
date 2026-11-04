@@ -31,14 +31,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initAuth = async () => {
       try {
         if (api.getMasterToken()) {
-          const status = await api.checkAuthStatus();
-          if (status.authenticated) {
+          try {
+            const status = await api.checkAuthStatus();
+            if (status.authenticated) {
+              setIsMasterAuthenticated(true);
+              setMasterToken(api.getMasterToken());
+              await loadProfiles();
+            } else {
+              api.setMasterToken(null);
+              setIsMasterAuthenticated(false);
+            }
+          } catch (netErr) {
+            // Offline fallback: keep master session active from cached token
             setIsMasterAuthenticated(true);
             setMasterToken(api.getMasterToken());
             await loadProfiles();
-          } else {
-            api.setMasterToken(null);
-            setIsMasterAuthenticated(false);
           }
         }
       } catch (err) {
@@ -55,8 +62,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setActiveProfile(null);
     };
 
+    const handleSyncComplete = () => {
+      loadProfiles();
+    };
+
     window.addEventListener('omni:master_auth_expired', handleExpired);
-    return () => window.removeEventListener('omni:master_auth_expired', handleExpired);
+    window.addEventListener('omni:sync_completed', handleSyncComplete);
+    return () => {
+      window.removeEventListener('omni:master_auth_expired', handleExpired);
+      window.removeEventListener('omni:sync_completed', handleSyncComplete);
+    };
   }, []);
 
   const loadProfiles = async () => {
@@ -97,11 +112,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await api.verifyProfilePin(profileId, pin);
       if (res.success) {
+        localStorage.setItem(`omni_offline_pin_${profileId}`, '1');
         setActiveProfile(res.profile);
         return true;
       }
       return false;
-    } catch (err) {
+    } catch (err: any) {
+      // Offline fallback: if profile was previously unlocked with PIN on this device, allow offline entry
+      const wasUnlocked = localStorage.getItem(`omni_offline_pin_${profileId}`) === '1';
+      if (wasUnlocked) {
+        const cached = profiles.find((p) => p.id === profileId);
+        if (cached) {
+          api.setProfileToken('offline_token', cached.id);
+          setActiveProfile(cached);
+          return true;
+        }
+      }
       return false;
     }
   };

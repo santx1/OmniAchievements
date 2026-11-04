@@ -93,6 +93,24 @@ server {
 
 ---
 
+## 📡 Offline-First Storage & Cloud Synchronization
+
+OmniAchievements features an **offline-first hybrid architecture**:
+
+1. **Client-Side IndexedDB Storage**:
+   - Every profile, game, achievement badge, custom platform, and statistic is stored locally in client-side IndexedDB on your iPhone, iPad, or browser.
+   - You can launch the app, browse your entire library, inspect achievements, toggle trophies unlocked while playing on portable devices, edit notes, or add custom games with **zero network connectivity**.
+
+2. **Automatic Reconciliation & Queued Mutations**:
+   - When offline, modifications are executed optimistically and enqueued in an atomic IndexedDB mutation queue.
+   - As soon as your device reconnects to your home server or internet, OmniAchievements automatically pushes queued mutations to the server in a single atomic transaction and pulls the latest cloud snapshot.
+
+3. **Status Indicators**:
+   - **Navbar Pill**: Displays live sync state: `Synced` (Green), `Syncing...` (Spinning blue), `N Queued` (Amber), or `Offline` (Gray).
+   - **Settings Tab**: Go to **Settings > Local Storage & Cloud Synchronization** to view local trophy counts, pending queue depth, last sync time, and trigger manual syncs.
+
+---
+
 ## 💾 Backups & Data Persistence
 All your profiles, games, achievements, notes, and blacklists are stored in a single SQLite database file in `./data/omniachievements.sqlite`.
 

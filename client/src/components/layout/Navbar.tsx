@@ -1,7 +1,8 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext.js';
 import { useTheme } from '../../context/ThemeContext.js';
-import { Trophy, RefreshCw, Sun, Moon, Laptop, Plus, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { useSyncStatus } from '../../utils/syncEngine.js';
+import { Trophy, RefreshCw, Sun, Moon, Laptop, Plus, LogOut, Settings as SettingsIcon, Cloud, CloudOff, CloudUpload } from 'lucide-react';
 import { getAvatarUrl } from '../../utils/avatars.js';
 
 interface NavbarProps {
@@ -17,6 +18,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { activeProfile, lockProfile } = useAuth();
   const { theme, setTheme } = useTheme();
+  const { syncState, pendingCount, triggerSync } = useSyncStatus();
 
   const cycleTheme = () => {
     if (theme === 'dark') setTheme('light');
@@ -44,6 +46,49 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Cloud Synchronization Status Pill */}
+          <button
+            onClick={() => triggerSync()}
+            disabled={syncState === 'syncing'}
+            title={
+              syncState === 'syncing'
+                ? 'Syncing with cloud...'
+                : syncState === 'offline'
+                ? 'Offline mode: all changes saved locally and will sync when reconnected'
+                : pendingCount > 0
+                ? `${pendingCount} changes saved locally pending cloud sync. Click to sync now.`
+                : 'All changes synchronized with cloud. Click to force sync.'
+            }
+            className={`px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all border ${
+              syncState === 'syncing'
+                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                : syncState === 'offline'
+                ? 'bg-slate-200/80 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700'
+                : pendingCount > 0
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 animate-pulse'
+                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+            }`}
+          >
+            {syncState === 'syncing' ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : syncState === 'offline' ? (
+              <CloudOff className="w-3.5 h-3.5" />
+            ) : pendingCount > 0 ? (
+              <CloudUpload className="w-3.5 h-3.5" />
+            ) : (
+              <Cloud className="w-3.5 h-3.5" />
+            )}
+            <span className="hidden sm:inline font-mono text-[11px]">
+              {syncState === 'syncing'
+                ? 'Syncing...'
+                : syncState === 'offline'
+                ? 'Offline'
+                : pendingCount > 0
+                ? `${pendingCount} queued`
+                : 'Cloud Synced'}
+            </span>
+          </button>
+
           {/* Quick Steam Sync */}
           <button
             onClick={onOpenSteamSync}

@@ -1,4 +1,5 @@
 import { Game, Achievement, Profile, StatsData, BlacklistItem, Platform, GameStatus, CustomPlatform } from '../types/index.js';
+import { offlineStore } from '../utils/offlineStore.js';
 
 const DEFAULT_API_BASE = '/api';
 
@@ -86,10 +87,21 @@ class ApiClient {
     }
 
     const base = this.serverUrl ? `${this.serverUrl}/api` : '/api';
-    const response = await fetch(`${base}${endpoint}`, {
-      ...options,
-      headers
-    });
+    let response: Response;
+
+    try {
+      response = await fetch(`${base}${endpoint}`, {
+        ...options,
+        headers
+      });
+    } catch (networkErr: any) {
+      // Network failure / offline: serve or queue locally
+      window.dispatchEvent(new CustomEvent('omni:connectivity_changed', { detail: { online: false } }));
+      return this.handleOfflineRequest<T>(endpoint, options);
+    }
+
+    // Success response: notify online status
+    window.dispatchEvent(new CustomEvent('omni:connectivity_changed', { detail: { online: true } }));
 
     if (response.status === 401) {
       const err = await response.json().catch(() => ({}));
@@ -105,7 +117,228 @@ class ApiClient {
       throw new Error(err.error || `Request failed with status ${response.status}`);
     }
 
-    return response.json();
+    const data = await response.json();
+
+    // Asynchronously update local cache with fresh server data
+    this.cacheResponseData(endpoint, (options.method || 'GET').toUpperCase(), data);
+
+    return data;
+  }
+
+  private async handleOfflineRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const method = (options.method || 'GET').toUpperCase();
+    const body = options.body ? JSON.parse(options.body as string) : undefined;
+    const profileId = this.activeProfileId || '';
+
+    // 1. Read Operations (IndexedDB Cache)
+    if (method === 'GET') {
+      if (endpoint === '/profiles') {
+        const profiles = await offlineStore.getCachedProfiles();
+        return { profiles } as unknown as T;
+      }
+
+      if (endpoint.startsWith('/games/')) {
+        const gameId = endpoint.replace('/games/', '').split('?')[0];
+        if (gameId && gameId !== 'blacklist') {
+          const game = await offlineStore.getCachedGame(gameId);
+          const achievements = await offlineStore.getCachedAchievements(gameId);
+          if (game) {
+            return { game, achievements } as unknown as T;
+          }
+        }
+      }
+
+      if (endpoint.startsWith('/games')) {
+        const url = new URL(`http://localhost${endpoint}`);
+        const params = {
+          platform: url.searchParams.get('platform') || undefined,
+          status: url.searchParams.get('status') || undefined,
+          search: url.searchParams.get('search') || undefined,
+          sort: url.searchParams.get('sort') || undefined
+        };
+        const games = await offlineStore.getCachedGames(profileId, params);
+        return { games } as unknown as T;
+      }
+
+      if (endpoint.startsWith('/achievements/game/')) {
+        const gameId = endpoint.replace('/achievements/game/', '');
+        const achievements = await offlineStore.getCachedAchievements(gameId);
+        return { achievements } as unknown as T;
+      }
+
+      if (endpoint === '/platforms') {
+        const platforms = await offlineStore.getCachedPlatforms();
+        return { platforms } as unknown as T;
+      }
+
+      if (endpoint === '/stats') {
+        const cached = await offlineStore.getCachedStats(profileId);
+        if (cached) return cached as unknown as T;
+        const games = await offlineStore.getCachedGames(profileId);
+        const unplayed = games.filter((g) => g.status === 'unplayed').length;
+        const playing = games.filter((g) => g.status === 'playing').length;
+        const finished = games.filter((g) => g.status === 'finished').length;
+        const completed100 = games.filter((g) => g.status === 'completed_100').length;
+        return {
+          totalGames: games.length,
+          unplayed,
+          playing,
+          finished,
+          completed100,
+          totalPlaytimeHours: Math.round(games.reduce((acc, g) => acc + (g.playtime_minutes || 0), 0) / 60),
+          totalAchievements: games.reduce((acc, g) => acc + (g.total_achievements || 0), 0),
+          unlockedAchievements: games.reduce((acc, g) => acc + (g.unlocked_achievements || 0), 0),
+          recentUnlocks: []
+        } as unknown as T;
+      }
+
+      if (endpoint === '/auth/status') {
+        return { authenticated: Boolean(this.masterToken) } as unknown as T;
+      }
+    }
+
+    // 2. Mutations (Offline queue & optimistic local update)
+    if (endpoint.includes('/toggle')) {
+      const match = endpoint.match(/\/achievements\/([^/]+)\/toggle/);
+      if (match) {
+        const achId = match[1];
+        const res = await offlineStore.toggleCachedAchievement(achId, body?.is_unlocked);
+        await offlineStore.enqueueMutation({
+          profileId,
+          endpoint,
+          method: 'PATCH',
+          body,
+          description: `Toggle achievement ${achId}`
+        });
+        window.dispatchEvent(new CustomEvent('omni:mutation_enqueued'));
+        return { achievement: res?.achievement } as unknown as T;
+      }
+    }
+
+    if (method === 'PUT' && endpoint.startsWith('/games/')) {
+      const gameId = endpoint.replace('/games/', '');
+      const existing = await offlineStore.getCachedGame(gameId);
+      if (existing) {
+        const updated = { ...existing, ...body, updated_at: new Date().toISOString() };
+        await offlineStore.saveCachedGame(updated);
+        await offlineStore.enqueueMutation({
+          profileId,
+          endpoint,
+          method: 'PUT',
+          body,
+          description: `Update game ${existing.title}`
+        });
+        window.dispatchEvent(new CustomEvent('omni:mutation_enqueued'));
+        return { game: updated } as unknown as T;
+      }
+    }
+
+    if (method === 'POST' && endpoint === '/games') {
+      const offlineId = `offline_game_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const now = new Date().toISOString();
+      const newGame: Game = {
+        id: offlineId,
+        profile_id: profileId,
+        title: body.title,
+        platform: body.platform,
+        external_id: body.external_id || '',
+        cover_image: body.cover_image || '',
+        banner_image: body.banner_image || '',
+        hero_image: body.hero_image || '',
+        icon_image: body.icon_image || '',
+        status: body.status || 'unplayed',
+        is_custom: 1,
+        playtime_minutes: body.playtime_minutes || 0,
+        total_achievements: body.initialAchievements?.length || 0,
+        unlocked_achievements: 0,
+        user_rating: body.user_rating || 0,
+        notes: body.notes || '',
+        created_at: now,
+        updated_at: now
+      };
+      await offlineStore.saveCachedGame(newGame);
+
+      if (body.initialAchievements && Array.isArray(body.initialAchievements)) {
+        const achs = body.initialAchievements.map((a: any, idx: number) => ({
+          id: `offline_ach_${Date.now()}_${idx}`,
+          game_id: offlineId,
+          profile_id: profileId,
+          api_name: `ach_${idx}`,
+          display_name: a.display_name,
+          description: a.description || '',
+          icon_unlocked: a.icon_unlocked || '',
+          icon_locked: a.icon_locked || '',
+          is_unlocked: 0,
+          created_at: now,
+          updated_at: now
+        }));
+        await offlineStore.cacheAchievements(offlineId, achs);
+      }
+
+      await offlineStore.enqueueMutation({
+        profileId,
+        endpoint,
+        method: 'POST',
+        body,
+        description: `Create game ${newGame.title}`
+      });
+      window.dispatchEvent(new CustomEvent('omni:mutation_enqueued'));
+      return { game: newGame } as unknown as T;
+    }
+
+    if (method === 'DELETE' && endpoint.startsWith('/games/')) {
+      const gameId = endpoint.replace('/games/', '');
+      await offlineStore.deleteCachedGame(gameId);
+      await offlineStore.enqueueMutation({
+        profileId,
+        endpoint,
+        method: 'DELETE',
+        body,
+        description: `Delete game ${gameId}`
+      });
+      window.dispatchEvent(new CustomEvent('omni:mutation_enqueued'));
+      return { success: true, message: 'Deleted locally and queued for cloud sync' } as unknown as T;
+    }
+
+    throw new Error('This action requires an active cloud connection.');
+  }
+
+  private async cacheResponseData(endpoint: string, method: string, data: any) {
+    try {
+      const profileId = this.activeProfileId || '';
+
+      if (method === 'GET') {
+        if (endpoint === '/profiles' && data?.profiles) {
+          offlineStore.cacheProfiles(data.profiles);
+        } else if (endpoint.startsWith('/games') && !endpoint.includes('search=') && data?.games) {
+          offlineStore.cacheGames(profileId, data.games);
+        } else if (endpoint.startsWith('/games/') && data?.game) {
+          offlineStore.saveCachedGame(data.game);
+          if (data.achievements) {
+            offlineStore.cacheAchievements(data.game.id, data.achievements);
+          }
+        } else if (endpoint.startsWith('/achievements/game/') && data?.achievements) {
+          const gameId = endpoint.replace('/achievements/game/', '');
+          offlineStore.cacheAchievements(gameId, data.achievements);
+        } else if (endpoint === '/platforms' && data?.platforms) {
+          offlineStore.cachePlatforms(data.platforms);
+        } else if (endpoint === '/stats' && data) {
+          offlineStore.cacheStats(profileId, data);
+        }
+      } else if (method === 'POST' || method === 'PUT') {
+        if (data?.game) {
+          offlineStore.saveCachedGame(data.game);
+        }
+        if (data?.achievement) {
+          offlineStore.cacheAchievements(data.achievement.game_id, [data.achievement]);
+        }
+      } else if (method === 'DELETE' && endpoint.startsWith('/games/')) {
+        const gameId = endpoint.replace('/games/', '');
+        offlineStore.deleteCachedGame(gameId);
+      }
+    } catch (e) {
+      // Non-blocking caching errors
+    }
   }
 
   // Auth & Master Password
@@ -388,6 +621,19 @@ class ApiClient {
 
   async exportAiAchievements(gameId: string): Promise<any> {
     return this.request(`/ai/export/${gameId}`);
+  }
+
+  // Cloud Sync
+  async pullSyncSnapshot(since?: string): Promise<any> {
+    const q = since ? `?since=${encodeURIComponent(since)}` : '';
+    return this.request(`/sync/pull${q}`);
+  }
+
+  async pushSyncBatch(batch: any): Promise<any> {
+    return this.request('/sync/push', {
+      method: 'POST',
+      body: JSON.stringify(batch)
+    });
   }
 }
 

@@ -44,6 +44,14 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
 
   useEffect(() => {
     loadPlatforms();
+
+    const handleSyncComplete = () => {
+      loadGames();
+      loadPlatforms();
+    };
+
+    window.addEventListener('omni:sync_completed', handleSyncComplete);
+    return () => window.removeEventListener('omni:sync_completed', handleSyncComplete);
   }, []);
 
   const loadPlatforms = async () => {

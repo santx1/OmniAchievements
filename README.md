@@ -27,6 +27,13 @@ Disclaimer: This app has been 100% AI made, including documentation and all the 
 - **Web Gateway with Master Password**: Access the web version securely from anywhere. An immediate master password gate blocks unauthorized visitors before any profile or data is accessible.
 - **Easy IPA Compilation**: Automated GitHub Actions workflow compiles the `.ipa` for your iPhone and iPad with 1-click in the cloud—no Mac required!
 
+### 📡 Offline-First Architecture & Cloud Auto-Sync
+- **Local IndexedDB Database**: Full offline persistence across iOS, iPadOS, and Web. Every profile, game, achievement badge, custom platform, and statistic is stored locally in client-side IndexedDB.
+- **100% Offline Functionality**: Play, toggle achievement unlocks, edit game notes, or add custom games with zero internet connection while traveling or on airplanes.
+- **Atomic Mutation Queue**: Offline actions are enqueued locally with optimistic UI updates. As soon as connectivity to your server is restored, mutations are automatically flushed to the cloud SQLite backend and synced differential snapshots are pulled.
+- **Live Sync Navbar Indicator**: Real-time cloud sync status pill in the top navigation bar (🟢 Synced / 🔄 Syncing... / 🟡 Queued mutations / ⚪ Offline mode) with manual 1-click sync trigger.
+- **Settings Storage Dashboard**: Real-time inspection of local cached games, achievements, queued offline actions, and last synchronization timestamp.
+
 ### 🔄 Steam API Synchronization, Family Sharing & Auto 100% Detection
 - **Automatic Library Sync**: Imports owned games, playtime, and unlocked achievements directly using Valve's official Steam Web API.
 - **Steam Family Sharing Multi-Account Sync**: Add family members' Steam accounts in your profile settings. OmniAchievements synchronizes both your own and shared family games with full playtime and achievement tracking.
@@ -76,15 +83,16 @@ Disclaimer: This app has been 100% AI made, including documentation and all the 
 omniachievements/
 ├── client/                     # React 18 + TypeScript + Vite + Tailwind + Capacitor
 │   ├── src/
-│   │   ├── api/                # REST client for backend endpoints
+│   │   ├── api/                # Transparent offline-first REST client
 │   │   ├── components/
 │   │   │   ├── auth/           # MasterPasswordGate, ProfileSelector, PinPadModal
 │   │   │   ├── games/          # GameCard, GameDetailModal, AddGameModal, LibraryView
-│   │   │   ├── layout/         # Navbar, BottomTabBar (iOS), Sidebar (iPad/Web)
+│   │   │   ├── layout/         # Navbar (Sync Pill), BottomTabBar, Sidebar
 │   │   │   ├── stats/          # StatisticsView, DonutChart, HallOfFame
 │   │   │   ├── steam/          # SteamSyncModal, BlacklistManagerModal
-│   │   │   └── settings/       # SettingsView (Profiles, Server, Decky Pairing)
+│   │   │   └── settings/       # SettingsView (Profiles, Sync Dashboard, Server)
 │   │   ├── context/            # AuthContext, ThemeContext
+│   │   ├── utils/              # offlineStore (IndexedDB), syncEngine (Auto-Sync)
 │   │   └── types/              # Unified TypeScript definitions
 │   ├── capacitor.config.ts     # Capacitor iOS & iPadOS configuration
 │   └── vite.config.ts
@@ -97,7 +105,7 @@ omniachievements/
 │   │   ├── services/
 │   │   │   ├── steamService.ts        # Steam Web API (games, achievements, schema)
 │   │   │   └── steamGridDbService.ts  # SteamGridDB API (covers, heroes, icons)
-│   │   ├── routes/             # REST endpoints (auth, profiles, games, stats, decky)
+│   │   ├── routes/             # REST endpoints (auth, profiles, games, stats, sync, decky)
 │   │   └── index.ts
 │   └── tsconfig.json
 │

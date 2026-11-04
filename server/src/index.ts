@@ -18,6 +18,7 @@ import retroRoutes from './routes/retroRoutes.js';
 import backupRoutes from './routes/backupRoutes.js';
 import platformRoutes from './routes/platformRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import syncRoutes from './routes/syncRoutes.js';
 import { BackupService } from './services/backupService.js';
 
 const app = express();
@@ -50,6 +51,7 @@ app.use('/api/retro', retroRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/platforms', platformRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/sync', syncRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
