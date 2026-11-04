@@ -6,6 +6,9 @@ on:
     tags: [ 'v*' ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   CI: true
 
@@ -64,6 +67,7 @@ jobs:
           rm -rf Payload OmniAchievements.ipa
           mkdir -p Payload
           cp -R ./build-output/Build/Products/Release-iphoneos/App.app Payload/
+          chmod -R 755 Payload
           # -y preserves symbolic links in frameworks, preventing "Bad message" extraction errors
           zip -qry -9 OmniAchievements.ipa Payload
           # Verify integrity
@@ -78,3 +82,21 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
+
+      - name: Publish Direct IPA to GitHub Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd client/ios/App
+          TAG="latest"
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "Target Release Tag: $TAG"
+
+          # Delete previous release with same tag if exists to keep rolling latest fresh
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+
+          gh release create "$TAG" OmniAchievements.ipa \
+            --title "OmniAchievements iOS & iPadOS ($TAG)" \
+            --notes "Direct, uncompressed .ipa package ready for SideStore, AltStore, TrollStore, and Sideloadly. DO NOT uncompress this file."

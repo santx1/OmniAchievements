@@ -6,28 +6,30 @@ This guide provides the **easiest ways to compile the `.ipa` package** and insta
 
 ---
 
-## ⚡ Method 1: Automated GitHub Actions (Easiest - No Mac Required!)
+## ⚡ Method 1: Automated GitHub Actions & Direct Releases (Easiest - No Mac Required!)
 
-You don't need a Mac or complex developer tools. GitHub provides free macOS virtual machines that will compile the IPA for you automatically with one click.
+You don't need a Mac or complex developer tools. GitHub provides free macOS virtual machines that compile the IPA automatically with one click and attach it directly to **GitHub Releases**.
 
-### How to use GitHub Actions:
-1. Push this repository to your personal GitHub account (public or private).
-2. Go to the **Actions** tab in your GitHub repository.
-3. In the left sidebar, click **"Build iOS & iPadOS IPA"**.
-4. Click the **Run workflow** button on the right and select the `main` branch.
-5. Wait ~3 to 4 minutes for the workflow to complete.
-6. Click on the completed workflow run, scroll down to **Artifacts**, and download `OmniAchievements-iOS-IPA.zip`.
-7. Unzip `OmniAchievements-iOS-IPA.zip` to extract the `OmniAchievements.ipa` file!
+### How to get the IPA:
+1. Push this repository to your personal GitHub account.
+2. Go to the **Actions** tab in your GitHub repository > Click **"Build iOS & iPadOS IPA"** > Click **Run workflow**.
+3. When the build finishes (~3 minutes), go to the **Releases** section of your GitHub repository (or click **Releases > Latest**).
+4. Download **`OmniAchievements.ipa`** directly!
+   * 👉 **Direct Download URL**: `https://github.com/<your-username>/OmniAchievements/releases/latest/download/OmniAchievements.ipa`
+   * This is the raw `.ipa` file directly. **No unzipping or decompression is needed!**
 
 > [!IMPORTANT]
-> **DO NOT tap to decompress `OmniAchievements.ipa`!**
-> On iOS and iPadOS, the Files app treats `.ipa` files like zip archives. If you tap on `OmniAchievements.ipa`, iOS will attempt to extract it and show an error: *"The operation couldn't be completed. Bad message"*!
-> The `.ipa` is an app package. Instead of tapping it, open your sideloading app (SideStore, AltStore, TrollStore) and select the `.ipa` from the app's **"+"** or **Import** button.
+> **DO NOT try to uncompress or unzip `OmniAchievements.ipa`!**
+> An `.ipa` file IS the final iOS app installer (just like an `.apk` on Android or `.exe` on Windows). 
+> If you tap on `OmniAchievements.ipa` in the iOS Files app or try to uncompress it, iOS will attempt to treat it as a regular archive and fail with:
+> *"Unsupported file format"* or *"Bad message"*.
+> **Do not open or extract it.** Instead, open your sideloading app (SideStore, AltStore, TrollStore) and import the `.ipa` directly.
 
-### ⚠️ Troubleshooting: "Bad message" when uncompressing `OmniAchievements-iOS-IPA.zip`
-If you see *"The operation couldn't be completed. Bad message"* when unzipping `OmniAchievements-iOS-IPA.zip`:
-1. **Incomplete Download in Safari**: Downloading large files from GitHub in mobile Safari can get interrupted if the app is put in the background. Keep Safari open until the blue download progress circle finishes completely.
-2. **Use a Robust Extractor**: If the default iOS Files app struggles, open the zip file using [Documents by Readdle](https://apps.apple.com/app/documents-file-reader-browser/id364901807) (free) or extract it on your computer with 7-Zip or The Unarchiver.
+### ⚠️ Troubleshooting: "Unsupported file format even though it's a zip"
+If you downloaded an artifact `.zip` from GitHub and it says *"unsupported file format"*:
+1. **The file is not a real zip (it is an HTML error page)**: GitHub Actions artifact downloads require authentication cookies. If you tap the download button from a mobile browser where you are not logged in, or if cross-site tracking is blocked, GitHub downloads a tiny 401/403 HTML page named `.zip`. When you try to unzip it, the system says *"unsupported file format"* because the file contains HTML text, not zip data!
+   * **Fix**: Use the direct **GitHub Releases** download link above instead, which is public and never requires authentication!
+2. **Double Extensions (`.ipa.zip`)**: Make sure your phone or PC didn't rename the file to `OmniAchievements.ipa.zip`. It must strictly be `OmniAchievements.ipa`.
 
 ---
 
