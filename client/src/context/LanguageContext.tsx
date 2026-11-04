@@ -78,8 +78,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       current = fallbackCurrent !== undefined ? fallbackCurrent : path;
     }
 
-    if (typeof current !== 'string') {
-      return path;
+    if (typeof current !== 'string' || current === path) {
+      if (params && typeof params.defaultValue === 'string') {
+        return params.defaultValue;
+      }
+      return typeof current === 'string' ? current : path;
     }
 
     let result = current;

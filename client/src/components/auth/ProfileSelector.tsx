@@ -91,11 +91,11 @@ export const ProfileSelector: React.FC = () => {
       <div className="absolute top-6 right-6 z-20">
         <button
           onClick={toggleLanguage}
-          title={language === 'en' ? 'Cambiar a Español' : 'Switch to English'}
+          title={language === 'en' ? 'Language: English (Click to change)' : 'Idioma: Español (Clic para cambiar)'}
           className="px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-slate-800 text-slate-300 font-medium text-xs flex items-center gap-1.5 border border-slate-700/60 transition-colors shadow-sm"
         >
           <Globe className="w-3.5 h-3.5 text-indigo-400" />
-          <span>{language === 'en' ? 'Español' : 'English'}</span>
+          <span>{language === 'en' ? 'English' : 'Español'}</span>
         </button>
       </div>
 

@@ -114,11 +114,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Language Switcher Pill */}
           <button
             onClick={toggleLanguage}
-            title={language === 'en' ? 'Cambiar a Español' : 'Switch to English'}
+            title={language === 'en' ? 'Language: English (Click to change)' : 'Idioma: Español (Clic para cambiar)'}
             className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 transition-colors border border-slate-300/40 dark:border-slate-700/60"
           >
             <Globe className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="font-mono text-xs font-bold">{language === 'en' ? 'ES' : 'EN'}</span>
+            <span className="font-mono text-xs font-bold">{language === 'en' ? 'EN' : 'ES'}</span>
           </button>
 
           {/* Theme Mode Toggle */}

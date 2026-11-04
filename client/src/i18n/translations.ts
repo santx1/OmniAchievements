@@ -41,7 +41,10 @@ export const translations = {
       required: 'Required',
       language: 'Language',
       english: 'English',
-      spanish: 'Español'
+      spanish: 'Español',
+      add: 'Add',
+      title: 'Title',
+      description: 'Description'
     },
     auth: {
       masterPasswordTitle: 'Master Server Password',
@@ -132,6 +135,8 @@ export const translations = {
       overviewTab: 'Overview & Notes',
       artworkTab: 'Artwork & Covers',
       tabAchievementsCount: 'Achievements ({count})',
+      addCustomAchievement: 'Add custom achievements',
+      addAchievementTitle: 'Add Custom Achievement',
       statusLabel: 'Backlog Status',
       playtimeLabel: 'Playtime (hours)',
       ratingLabel: 'Your Rating',
@@ -343,7 +348,10 @@ export const translations = {
       required: 'Obligatorio',
       language: 'Idioma',
       english: 'English',
-      spanish: 'Español'
+      spanish: 'Español',
+      add: 'Añadir',
+      title: 'Título',
+      description: 'Descripción'
     },
     auth: {
       masterPasswordTitle: 'Contraseña Maestra del Servidor',
@@ -434,6 +442,8 @@ export const translations = {
       overviewTab: 'Resumen y Notas',
       artworkTab: 'Carátulas y Arte',
       tabAchievementsCount: 'Logros ({count})',
+      addCustomAchievement: 'Añadir logros personalizados',
+      addAchievementTitle: 'Añadir Logro Personalizado',
       statusLabel: 'Estado en el Backlog',
       playtimeLabel: 'Tiempo Jugado (horas)',
       ratingLabel: 'Tu Puntuación',

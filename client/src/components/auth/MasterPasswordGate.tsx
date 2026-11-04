@@ -94,10 +94,10 @@ export const MasterPasswordGate: React.FC = () => {
           type="button"
           onClick={toggleLanguage}
           className="absolute top-5 right-5 z-10 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/70 text-slate-300 hover:text-white text-xs font-semibold transition-all active:scale-95 shadow-sm"
-          title="Switch Language / Cambiar Idioma"
+          title={language === 'en' ? 'Language: English (Click to change)' : 'Idioma: Español (Clic para cambiar)'}
         >
           <Globe className="w-3.5 h-3.5 text-indigo-400" />
-          <span>{language === 'en' ? 'Español' : 'English'}</span>
+          <span>{language === 'en' ? 'English' : 'Español'}</span>
         </button>
 
         {/* Ambient background glow */}
