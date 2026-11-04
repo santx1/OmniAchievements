@@ -1,6 +1,21 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext.js';
-import { ShieldCheck, Lock, ArrowRight, Eye, EyeOff, Server, KeyRound } from 'lucide-react';
+import { api } from '../../api/client.js';
+import { 
+  ShieldCheck, 
+  Lock, 
+  ArrowRight, 
+  Eye, 
+  EyeOff, 
+  Server, 
+  KeyRound, 
+  Wifi, 
+  CheckCircle2, 
+  AlertCircle, 
+  ChevronDown, 
+  ChevronUp, 
+  RefreshCw 
+} from 'lucide-react';
 
 export const MasterPasswordGate: React.FC = () => {
   const { loginMaster } = useAuth();
@@ -9,9 +24,49 @@ export const MasterPasswordGate: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Server Connection URL
+  const isNative = api.isNativeApp();
+  const [serverUrl, setServerUrl] = useState(api.getServerUrl());
+  const [showServerConfig, setShowServerConfig] = useState(isNative && !api.getServerUrl());
+  const [connectionStatus, setConnectionStatus] = useState<{ online: boolean; latencyMs?: number; error?: string } | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
+
+  const handleTestConnection = async () => {
+    setIsTesting(true);
+    setConnectionStatus(null);
+    try {
+      const target = serverUrl.trim();
+      const res = await api.testConnection(target);
+      setConnectionStatus(res);
+      if (res.online) {
+        api.setServerUrl(target);
+      }
+    } catch (e: any) {
+      setConnectionStatus({ online: false, error: e.message || 'Connection failed' });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  const handleServerUrlChange = (val: string) => {
+    setServerUrl(val);
+    setConnectionStatus(null);
+    api.setServerUrl(val);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) return;
+
+    if (isNative && !serverUrl.trim()) {
+      setError('Please configure your OmniAchievements Server URL below (e.g. http://192.168.1.100:3001) to connect.');
+      setShowServerConfig(true);
+      return;
+    }
+
+    if (serverUrl.trim()) {
+      api.setServerUrl(serverUrl.trim());
+    }
 
     setError(null);
     setIsLoading(true);
@@ -20,28 +75,104 @@ export const MasterPasswordGate: React.FC = () => {
       await loginMaster(password.trim());
     } catch (err: any) {
       setError(err.message || 'Incorrect master password. Check your server config.');
+      if (err.message && (err.message.includes('Server') || err.message.includes('connect') || err.message.includes('JSON') || err.message.includes('HTML'))) {
+        setShowServerConfig(true);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl">
-      <div className="w-full max-w-md p-8 rounded-3xl glass-dark border border-slate-700/60 shadow-2xl relative overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl overflow-y-auto">
+      <div className="w-full max-w-md p-6 sm:p-8 rounded-3xl glass-dark border border-slate-700/60 shadow-2xl relative overflow-hidden my-auto">
         {/* Ambient background glow */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="text-center mb-8 relative">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 text-white shadow-glow mb-4">
-            <ShieldCheck className="w-10 h-10" />
+        <div className="text-center mb-6 relative">
+          <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 text-white shadow-glow mb-3">
+            <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10" />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">OmniAchievements</h1>
-          <p className="text-sm text-slate-400 mt-1 font-medium">Self-Hosted Universal Game & Achievement Hub</p>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs text-indigo-300 font-medium mt-3">
+          <p className="text-xs sm:text-sm text-slate-400 mt-1 font-medium">Universal Game & Achievement Hub</p>
+          
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs text-indigo-300 font-medium mt-2.5">
             <Server className="w-3.5 h-3.5" />
-            <span>Local Network & Web Gateway</span>
+            <span>{isNative ? 'iOS / iPadOS Native Client' : 'Local Network & Web Gateway'}</span>
           </div>
+        </div>
+
+        {/* Server Connection Section (Essential for iOS app connecting to Docker/LAN server) */}
+        <div className="mb-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowServerConfig(!showServerConfig)}
+            className="w-full px-4 py-3 flex items-center justify-between text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Wifi className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Server Connection:</span>
+              <span className="text-indigo-300 font-mono text-[11px] truncate max-w-[170px]">
+                {serverUrl.trim() || (isNative ? 'Not Configured' : 'Local Origin')}
+              </span>
+            </div>
+            {showServerConfig ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+
+          {showServerConfig && (
+            <div className="p-4 pt-1 border-t border-slate-800/60 space-y-3 bg-slate-950/40">
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                {isNative 
+                  ? 'Enter your computer or server local IP address where OmniAchievements is running in Docker.'
+                  : 'Specify the backend server address if accessing remotely or through a reverse proxy.'}
+              </p>
+
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={serverUrl}
+                    onChange={(e) => handleServerUrlChange(e.target.value)}
+                    placeholder="e.g. http://192.168.1.150:3001"
+                    className="flex-grow px-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-700 text-white placeholder-slate-500 font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTestConnection}
+                    disabled={isTesting}
+                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all disabled:opacity-50 shrink-0"
+                  >
+                    {isTesting ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <span>Test</span>
+                    )}
+                  </button>
+                </div>
+
+                {connectionStatus && (
+                  <div className={`p-2 rounded-lg text-xs flex items-center gap-2 ${
+                    connectionStatus.online 
+                      ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400' 
+                      : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
+                  }`}>
+                    {connectionStatus.online ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                        <span>Connected to server! ({connectionStatus.latencyMs}ms latency)</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                        <span className="truncate">{connectionStatus.error || 'Server unreachable'}</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 relative">
@@ -70,9 +201,10 @@ export const MasterPasswordGate: React.FC = () => {
               </button>
             </div>
             {error && (
-              <p className="mt-2 text-xs font-medium text-rose-400 flex items-center gap-1">
-                <span>✕</span> {error}
-              </p>
+              <div className="mt-2.5 p-2.5 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs font-medium text-rose-300 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+                <span className="leading-snug">{error}</span>
+              </div>
             )}
           </div>
 

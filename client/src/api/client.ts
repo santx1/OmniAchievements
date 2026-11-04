@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core';
 import { Game, Achievement, Profile, StatsData, BlacklistItem, Platform, GameStatus, CustomPlatform } from '../types/index.js';
 import { offlineStore } from '../utils/offlineStore.js';
 
@@ -8,6 +9,11 @@ class ApiClient {
   private masterToken: string | null = localStorage.getItem('omni_master_token');
   private profileToken: string | null = localStorage.getItem('omni_profile_token');
   private activeProfileId: string | null = localStorage.getItem('omni_active_profile_id');
+
+  isNativeApp(): boolean {
+    if (typeof window === 'undefined') return false;
+    return Capacitor.isNativePlatform() || window.location.protocol === 'capacitor:' || window.location.protocol === 'ionic:';
+  }
 
   setServerUrl(url: string) {
     this.serverUrl = url.trim().replace(/\/+$/, '');
@@ -22,16 +28,56 @@ class ApiClient {
     return this.serverUrl;
   }
 
-  async testConnection(url?: string): Promise<{ online: boolean; latencyMs: number }> {
-    const target = (url || this.serverUrl || '').trim().replace(/\/+$/, '');
+  async testConnection(url?: string): Promise<{ online: boolean; latencyMs: number; error?: string }> {
+    const target = (url !== undefined ? url : this.serverUrl).trim().replace(/\/+$/, '');
+    if (this.isNativeApp() && !target) {
+      return { online: false, latencyMs: 0, error: 'Please enter your Server URL' };
+    }
     const endpoint = target ? `${target}/api/health` : '/api/health';
     const start = Date.now();
     try {
       const res = await fetch(endpoint, { method: 'GET' });
-      const data = await res.json();
-      return { online: data?.status === 'healthy', latencyMs: Date.now() - start };
-    } catch (e) {
-      return { online: false, latencyMs: 0 };
+      const text = await res.text();
+      if (!text || text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+        return { online: false, latencyMs: 0, error: 'Target returned a web page instead of the OmniAchievements API.' };
+      }
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        return { online: false, latencyMs: 0, error: 'Invalid JSON response from server.' };
+      }
+      if (data?.status === 'healthy' || data?.app === 'OmniAchievements') {
+        return { online: true, latencyMs: Date.now() - start };
+      }
+      return { online: false, latencyMs: 0, error: 'Server answered, but does not match OmniAchievements.' };
+    } catch (e: any) {
+      return { online: false, latencyMs: 0, error: e.message || 'Cannot reach server. Verify IP & Wi-Fi.' };
+    }
+  }
+
+  private async safeParseJson(response: Response): Promise<any> {
+    const contentType = response.headers.get('content-type') || '';
+    const text = await response.text();
+    if (!text || !text.trim()) {
+      return {};
+    }
+
+    if (!contentType.includes('application/json')) {
+      if (text.includes('<!DOCTYPE html>') || text.includes('<html')) {
+        if (this.isNativeApp() && !this.serverUrl) {
+          throw new Error('Server address not configured. Please enter your OmniAchievements Server URL below.');
+        }
+        throw new Error(`Server returned a web page instead of API response (${response.status}). Please check your Server URL.`);
+      }
+      throw new Error(`Unexpected server response format: ${contentType || 'text'}`);
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (err: any) {
+      console.error('[ApiClient] JSON parse error:', err, text.slice(0, 200));
+      throw new Error('Invalid JSON received from server. Check your connection or Server URL.');
     }
   }
 
@@ -69,6 +115,11 @@ class ApiClient {
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const isNative = this.isNativeApp();
+    if (isNative && !this.serverUrl && !endpoint.startsWith('/health')) {
+      throw new Error('Server URL not set. Please enter your OmniAchievements Server IP (e.g. http://192.168.1.xxx:3001) below.');
+    }
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string> || {})
@@ -103,21 +154,28 @@ class ApiClient {
     // Success response: notify online status
     window.dispatchEvent(new CustomEvent('omni:connectivity_changed', { detail: { online: true } }));
 
+    // Safely parse JSON or handle server error web pages
+    let data: any;
+    try {
+      data = await this.safeParseJson(response);
+    } catch (parseErr: any) {
+      if (response.ok) {
+        throw parseErr;
+      }
+      throw new Error(`Server returned status ${response.status}: ${parseErr.message}`);
+    }
+
     if (response.status === 401) {
-      const err = await response.json().catch(() => ({}));
-      if (err.code === 'MASTER_AUTH_REQUIRED' || err.code === 'TOKEN_EXPIRED') {
+      if (data?.code === 'MASTER_AUTH_REQUIRED' || data?.code === 'TOKEN_EXPIRED') {
         this.setMasterToken(null);
         window.dispatchEvent(new CustomEvent('omni:master_auth_expired'));
       }
-      throw new Error(err.error || 'Authentication required');
+      throw new Error(data?.error || 'Authentication required');
     }
 
     if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `Request failed with status ${response.status}`);
+      throw new Error(data?.error || `Request failed with status ${response.status}`);
     }
-
-    const data = await response.json();
 
     // Asynchronously update local cache with fresh server data
     this.cacheResponseData(endpoint, (options.method || 'GET').toUpperCase(), data);
