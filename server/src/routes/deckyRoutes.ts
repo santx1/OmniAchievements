@@ -256,13 +256,13 @@ router.get('/achievements/:shortcutId', (req: Request, res: Response) => {
     WHERE dl.profile_id = ? AND dl.steam_shortcut_id = ?
   `).get(profileId, String(shortcutId)) as any;
 
-  // 2. If no direct link, check if shortcutId matches external_id (e.g. Steam AppID)
+  // 2. If no direct link, check if shortcutId matches external_id (e.g. Steam AppID) or direct game id
   if (!link) {
     link = db.prepare(`
       SELECT id as game_id, title, cover_image, total_achievements, unlocked_achievements
       FROM games
-      WHERE profile_id = ? AND external_id = ?
-    `).get(profileId, String(shortcutId)) as any;
+      WHERE profile_id = ? AND (external_id = ? OR id = ?)
+    `).get(profileId, String(shortcutId), String(shortcutId)) as any;
   }
 
   if (!link) {

@@ -5,7 +5,8 @@ import {
   TextField,
   ProgressBar,
   Focusable,
-  staticClasses
+  staticClasses,
+  Router
 } from "@decky/ui";
 import React, { FC, useState, useEffect } from "react";
 
@@ -43,6 +44,18 @@ interface Achievement {
   icon_unlocked: string;
   icon_locked: string;
   is_unlocked: number;
+}
+
+interface ConnectionState {
+  checked: boolean;
+  loading: boolean;
+  online: boolean;
+  authenticated: boolean;
+  message?: string;
+  warning?: string;
+  error?: string;
+  gameCount?: number;
+  serverVersion?: string;
 }
 
 // Global reference for serverApi if provided by legacy/eval loader
@@ -93,9 +106,30 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
     globalServerApi = serverApi;
   }
 
-  const [serverUrl, setServerUrl] = useState("http://192.168.1.100:3001");
-  const [token, setToken] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
+  // Instant restoration from localStorage so closing the menu never blanks the inputs
+  const [serverUrl, setServerUrl] = useState(() => {
+    try {
+      return localStorage.getItem("omni_decky_server_url") || "http://192.168.1.100:3001";
+    } catch {
+      return "http://192.168.1.100:3001";
+    }
+  });
+
+  const [token, setToken] = useState(() => {
+    try {
+      return localStorage.getItem("omni_decky_token") || "";
+    } catch {
+      return "";
+    }
+  });
+
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionState>({
+    checked: false,
+    loading: false,
+    online: false,
+    authenticated: false
+  });
+
   const [activeShortcutId, setActiveShortcutId] = useState<string>("");
   const [activeShortcutName, setActiveShortcutName] = useState<string>("");
 
@@ -107,7 +141,7 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Self-Updater state
-  const [currentVersion, setCurrentVersion] = useState("0.2.2");
+  const [currentVersion, setCurrentVersion] = useState("0.2.3");
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateSource, setUpdateSource] = useState<"auto" | "server" | "github">("auto");
@@ -116,12 +150,33 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
   const [updateStatusMsg, setUpdateStatusMsg] = useState<string | null>(null);
   const [updateSuccess, setUpdateSuccess] = useState(false);
 
-  // Load config on mount
-  useEffect(() => {
-    callBackend("get_config").then((res: any) => {
-      if (res && res.server_url) {
-        setServerUrl(res.server_url || "http://192.168.1.100:3001");
+  const showToast = (title: string, body: string) => {
+    try {
+      if (globalServerApi?.toaster?.toast) {
+        globalServerApi.toaster.toast({ title, body });
+      } else if ((window as any).DeckyPluginLoader?.toaster?.toast) {
+        (window as any).DeckyPluginLoader.toaster.toast({ title, body });
       }
+    } catch (_) {}
+  };
+
+  // Synchronize on mount
+  useEffect(() => {
+    // 1. Load config from persistent Python backend
+    callBackend("get_config").then((res: any) => {
+      if (res) {
+        if (res.server_url) {
+          setServerUrl(res.server_url);
+          try { localStorage.setItem("omni_decky_server_url", res.server_url); } catch {}
+        }
+        if (res.token) {
+          setToken(res.token);
+          try { localStorage.setItem("omni_decky_token", res.token); } catch {}
+        }
+      }
+
+      // Automatically test connection on mount
+      testConnectionStatus();
     });
 
     callBackend("get_plugin_version").then((res: any) => {
@@ -132,8 +187,13 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
 
     detectRunningGame();
 
+    // Check running game periodically while menu is open (every 4 seconds)
+    const gameDetectInterval = setInterval(() => {
+      detectRunningGame();
+    }, 4000);
+
     // Periodic playtime logger every 5 minutes while gaming
-    const interval = setInterval(() => {
+    const playtimeInterval = setInterval(() => {
       if (activeShortcutId && linkedGame) {
         callBackend("log_playtime", {
           shortcut_id: activeShortcutId,
@@ -143,49 +203,207 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
       }
     }, 5 * 60 * 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(gameDetectInterval);
+      clearInterval(playtimeInterval);
+    };
   }, [activeShortcutId, linkedGame]);
 
-  const detectRunningGame = async () => {
+  const testConnectionStatus = async () => {
     try {
-      const activeApp = (window as any).SteamClient?.Apps?.GetActiveGameInfo?.() ||
-                        (window as any).SteamClient?.GameSessions?.GetActiveGameSession?.();
-      if (activeApp && activeApp.nAppId) {
-        const appId = String(activeApp.nAppId);
-        const appTitle = activeApp.strGameTitle || "Running Game";
-        setActiveShortcutId(appId);
-        setActiveShortcutName(appTitle);
+      const conn: any = await callBackend("check_connection");
+      if (conn) {
+        setConnectionStatus({
+          checked: true,
+          loading: false,
+          online: Boolean(conn.online),
+          authenticated: Boolean(conn.authenticated),
+          message: conn.message,
+          warning: conn.warning,
+          error: conn.error,
+          gameCount: conn.game_count,
+          serverVersion: conn.server_version
+        });
+        if (conn.authenticated) {
+          loadGames();
+        }
+      }
+    } catch (e: any) {
+      setConnectionStatus({
+        checked: true,
+        loading: false,
+        online: false,
+        authenticated: false,
+        error: String(e?.message || e)
+      });
+    }
+  };
 
-        // Check if already linked
-        const achRes: any = await callBackend("get_achievements", { shortcut_id: appId });
-        if (achRes && achRes.linked) {
-          setLinkedGame(achRes.game);
-          setAchievements(achRes.achievements || []);
-        } else {
-          // Trigger Fuzzy Match Auto-Suggestion
+  // Comprehensive multi-layer game detector
+  const detectRunningGame = async (userInitiated = false) => {
+    let appId = "";
+    let appTitle = "";
+
+    // Method 1: Router.MainRunningApp from @decky/ui
+    try {
+      const dfl = (window as any).DFL;
+      const router = Router || dfl?.Router || (window as any).Router;
+      const mainApp = router?.MainRunningApp;
+      if (mainApp) {
+        const rawId = mainApp.appid ?? mainApp.nAppId ?? mainApp.m_unAppId;
+        if (rawId && String(rawId) !== "0" && String(rawId) !== "769") {
+          appId = String(rawId);
+          appTitle = mainApp.display_name || mainApp.strDisplayName || mainApp.name || "";
+        }
+      }
+
+      // Method 2: Router.RunningApps
+      if (!appId && router?.RunningApps) {
+        const apps = Array.isArray(router.RunningApps)
+          ? router.RunningApps
+          : typeof router.RunningApps.values === "function"
+          ? Array.from(router.RunningApps.values())
+          : [];
+        const running = apps.find((a: any) => {
+          const id = String(a.appid ?? a.nAppId ?? "");
+          return id && id !== "0" && id !== "769";
+        });
+        if (running) {
+          appId = String(running.appid ?? running.nAppId);
+          appTitle = running.display_name || running.strDisplayName || running.name || "";
+        }
+      }
+    } catch (e) {
+      console.warn("[OmniAchievements] Router running apps error:", e);
+    }
+
+    // Method 3: SteamClient Apps / GameSessions
+    if (!appId) {
+      try {
+        const sc = (window as any).SteamClient;
+        const activeApp = sc?.Apps?.GetActiveGameInfo?.() || sc?.GameSessions?.GetActiveGameSession?.();
+        if (activeApp && activeApp.nAppId && String(activeApp.nAppId) !== "0" && String(activeApp.nAppId) !== "769") {
+          appId = String(activeApp.nAppId);
+          appTitle = activeApp.strGameTitle || "";
+        }
+      } catch (e) {
+        console.warn("[OmniAchievements] SteamClient active game check error:", e);
+      }
+    }
+
+    // Method 4: appOverviewStore / SteamUIStore
+    if (!appId) {
+      try {
+        const store = (window as any).appOverviewStore || (window as any).SteamUIStore;
+        if (store?.RunningApps) {
+          const apps = Array.isArray(store.RunningApps) ? store.RunningApps : [];
+          const running = apps.find((a: any) => String(a.appid) !== "769" && String(a.appid) !== "0");
+          if (running) {
+            appId = String(running.appid ?? running.nAppId);
+            appTitle = running.display_name || running.strDisplayName || "";
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Method 5: Python Backend /proc environment scanning for SteamAppId
+    if (!appId) {
+      try {
+        const pyRes: any = await callBackend("detect_running_game");
+        if (pyRes && pyRes.app_id) {
+          appId = String(pyRes.app_id);
+          appTitle = pyRes.app_title || pyRes.process_name || `Shortcut ${appId}`;
+        }
+      } catch (e) {
+        console.warn("[OmniAchievements] Python backend detect_running_game error:", e);
+      }
+    }
+
+    if (appId) {
+      setActiveShortcutId(appId);
+      setActiveShortcutName(appTitle || `Shortcut ${appId}`);
+
+      // Query achievements for this shortcut
+      const achRes: any = await callBackend("get_achievements", { shortcut_id: appId });
+      if (achRes && achRes.linked) {
+        setLinkedGame(achRes.game);
+        setAchievements(achRes.achievements || []);
+      } else {
+        // Search auto fuzzy match
+        if (appTitle) {
           const matchRes: any = await callBackend("match_game", { shortcut_name: appTitle });
           if (matchRes?.matches?.length > 0) {
             setSuggestedMatch(matchRes.matches[0]);
           }
         }
       }
-    } catch (e) {
-      console.warn("Could not query active game session from SteamClient", e);
+
+      if (userInitiated) {
+        showToast("Game Detected", `${appTitle || appId} active!`);
+      }
+    } else {
+      if (userInitiated) {
+        showToast("OmniAchievements", "No running game detected yet. Start a game or pick from library.");
+      }
     }
   };
 
   const handleSaveConfig = async () => {
     setIsLoading(true);
+    setConnectionStatus({
+      checked: true,
+      loading: true,
+      online: false,
+      authenticated: false,
+      message: `Connecting to ${serverUrl}...`
+    });
+
+    // Save to localStorage immediately
+    try {
+      localStorage.setItem("omni_decky_server_url", serverUrl);
+      if (token) localStorage.setItem("omni_decky_token", token);
+    } catch {}
+
     const res: any = await callBackend("configure", {
       server_url: serverUrl,
       token: token
     });
+
     setIsLoading(false);
+
     if (res && res.online) {
-      setIsConnected(true);
-      loadGames();
+      if (res.authenticated) {
+        setConnectionStatus({
+          checked: true,
+          loading: false,
+          online: true,
+          authenticated: true,
+          message: res.message || `Connected to server (v${res.server_version || ""})`,
+          gameCount: res.game_count,
+          serverVersion: res.server_version
+        });
+        showToast("OmniAchievements", `Connected! ${res.game_count ?? 0} games synced.`);
+        loadGames();
+        detectRunningGame();
+      } else {
+        setConnectionStatus({
+          checked: true,
+          loading: false,
+          online: true,
+          authenticated: false,
+          warning: res.warning || res.error || "Server reachable, but Pairing Token is invalid or missing."
+        });
+        showToast("OmniAchievements", res.warning || "Pairing token needed to sync games.");
+      }
     } else {
-      setIsConnected(false);
+      setConnectionStatus({
+        checked: true,
+        loading: false,
+        online: false,
+        authenticated: false,
+        error: res?.error || `Could not connect to ${serverUrl}. Check IP, port, and Wi-Fi.`
+      });
+      showToast("OmniAchievements Connection Error", res?.error || "Cannot reach server");
     }
   };
 
@@ -196,9 +414,9 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
     }
   };
 
-  const loadAchievementsForApp = async (appId: string) => {
+  const loadAchievementsForApp = async (appIdOrGameId: string) => {
     setIsLoading(true);
-    const res: any = await callBackend("get_achievements", { shortcut_id: appId });
+    const res: any = await callBackend("get_achievements", { shortcut_id: appIdOrGameId });
     setIsLoading(false);
     if (res && res.linked) {
       setLinkedGame(res.game);
@@ -219,6 +437,7 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
     });
     await loadAchievementsForApp(activeShortcutId);
     setIsLoading(false);
+    showToast("Game Linked", `Linked to ${activeShortcutName}!`);
   };
 
   const handleToggleAchievement = async (ach: Achievement) => {
@@ -229,6 +448,8 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
     });
     if (activeShortcutId) {
       await loadAchievementsForApp(activeShortcutId);
+    } else if (linkedGame) {
+      await loadAchievementsForApp(linkedGame.id);
     }
   };
 
@@ -267,14 +488,7 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
         setCurrentVersion(data.new_version);
         setUpdateAvailable(false);
         setUpdateStatusMsg(`✓ Successfully updated to v${data.new_version}! Reload Decky to apply.`);
-        try {
-          if (globalServerApi?.toaster?.toast) {
-            globalServerApi.toaster.toast({
-              title: "OmniAchievements Updated",
-              body: `Plugin updated to v${data.new_version}!`
-            });
-          }
-        } catch (_) {}
+        showToast("OmniAchievements Updated", `Plugin updated to v${data.new_version}!`);
       } else {
         setUpdateStatusMsg(`✕ Update error: ${data?.error || "Unknown error"}`);
       }
@@ -304,12 +518,76 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
   return (
     <>
       <PanelSection title="OmniAchievements Sync">
-        {/* Server Configuration */}
+        {/* Connection Status Box */}
+        <PanelSectionRow>
+          <div
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              borderRadius: "8px",
+              fontSize: "12px",
+              backgroundColor: connectionStatus.loading
+                ? "rgba(99, 102, 241, 0.15)"
+                : connectionStatus.authenticated
+                ? "rgba(16, 185, 129, 0.15)"
+                : connectionStatus.online
+                ? "rgba(245, 158, 11, 0.15)"
+                : connectionStatus.error
+                ? "rgba(239, 68, 68, 0.15)"
+                : "rgba(255, 255, 255, 0.05)",
+              border: `1px solid ${
+                connectionStatus.loading
+                  ? "rgba(99, 102, 241, 0.5)"
+                  : connectionStatus.authenticated
+                  ? "rgba(16, 185, 129, 0.5)"
+                  : connectionStatus.online
+                  ? "rgba(245, 158, 11, 0.5)"
+                  : connectionStatus.error
+                  ? "rgba(239, 68, 68, 0.5)"
+                  : "rgba(255, 255, 255, 0.1)"
+              }`,
+              color: connectionStatus.loading
+                ? "#a5b4fc"
+                : connectionStatus.authenticated
+                ? "#34d399"
+                : connectionStatus.online
+                ? "#fbbf24"
+                : connectionStatus.error
+                ? "#f87171"
+                : "#aaa"
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: "bold", marginBottom: "4px" }}>
+              <span>
+                {connectionStatus.loading
+                  ? "⏳ Testing Connection..."
+                  : connectionStatus.authenticated
+                  ? "🟢 Connected & Paired"
+                  : connectionStatus.online
+                  ? "🟡 Server Online (Pairing Token Needed)"
+                  : connectionStatus.error
+                  ? "🔴 Disconnected"
+                  : "⚪ Not Tested Yet"}
+              </span>
+            </div>
+            <div style={{ fontSize: "11px", wordBreak: "break-word", lineHeight: "1.4" }}>
+              {connectionStatus.message ||
+                connectionStatus.warning ||
+                connectionStatus.error ||
+                "Configure your server URL and Pairing Token, then click Connect Server."}
+            </div>
+          </div>
+        </PanelSectionRow>
+
+        {/* Server Configuration Fields */}
         <PanelSectionRow>
           <TextField
             label="Server URL (IP:Port)"
             value={serverUrl}
-            onChange={(e) => setServerUrl(e.target.value)}
+            onChange={(e) => {
+              setServerUrl(e.target.value);
+              try { localStorage.setItem("omni_decky_server_url", e.target.value); } catch {}
+            }}
           />
         </PanelSectionRow>
 
@@ -317,33 +595,59 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
           <TextField
             label="Pairing Token"
             value={token}
-            onChange={(e) => setToken(e.target.value)}
+            onChange={(e) => {
+              setToken(e.target.value);
+              try { localStorage.setItem("omni_decky_token", e.target.value); } catch {}
+            }}
           />
         </PanelSectionRow>
 
         <PanelSectionRow>
-          <ButtonItem layout="below" onClick={handleSaveConfig}>
-            {isLoading ? "Connecting..." : "Connect Server"}
+          <div style={{ fontSize: "10px", color: "#888", width: "100%", padding: "0 2px" }}>
+            💡 <em>Get your Pairing Token in OmniAchievements Web/iOS App: <strong>Settings &gt; Legion Go / Decky</strong></em>
+          </div>
+        </PanelSectionRow>
+
+        <PanelSectionRow>
+          <ButtonItem
+            layout="below"
+            onClick={handleSaveConfig}
+            disabled={isLoading}
+          >
+            {isLoading ? "Connecting to server..." : connectionStatus.authenticated ? "Reconnect / Test Connection" : "Connect Server"}
           </ButtonItem>
         </PanelSectionRow>
 
-        {/* Active Game & Linking */}
+        {/* Active Game & Detection Section */}
         <PanelSectionRow>
-          <div style={{ padding: "8px 0" }}>
-            <div style={{ fontSize: "12px", color: "#888" }}>Detected Running Game:</div>
-            <div style={{ fontSize: "14px", fontWeight: "bold" }}>
+          <div style={{ padding: "8px 0", width: "100%" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <span style={{ fontSize: "11px", color: "#888" }}>Detected Running Game:</span>
+              <span style={{ fontSize: "11px", color: activeShortcutId ? "#34d399" : "#888", fontWeight: "bold" }}>
+                {activeShortcutId ? "🎮 Active" : "⏸ Idle"}
+              </span>
+            </div>
+            <div style={{ fontSize: "14px", fontWeight: "bold", wordBreak: "break-word" }}>
               {activeShortcutName || "No game running currently"}
             </div>
             {activeShortcutId && (
-              <div style={{ fontSize: "11px", color: "#666" }}>AppID: {activeShortcutId}</div>
+              <div style={{ fontSize: "11px", color: "#666", marginTop: "2px" }}>AppID: {activeShortcutId}</div>
             )}
+            <div style={{ marginTop: "8px" }}>
+              <ButtonItem
+                layout="below"
+                onClick={() => detectRunningGame(true)}
+              >
+                🔄 Refresh Game Detection
+              </ButtonItem>
+            </div>
           </div>
         </PanelSectionRow>
 
         {/* 1-Click Auto-Detect & Fuzzy Match Suggestion */}
-        {!linkedGame && suggestedMatch && (
+        {!linkedGame && suggestedMatch && activeShortcutId && (
           <PanelSectionRow>
-            <div style={{ padding: "8px", borderRadius: "8px", background: "rgba(99, 102, 241, 0.2)", border: "1px solid rgba(99, 102, 241, 0.5)" }}>
+            <div style={{ width: "100%", padding: "10px", borderRadius: "8px", background: "rgba(99, 102, 241, 0.2)", border: "1px solid rgba(99, 102, 241, 0.5)" }}>
               <div style={{ fontSize: "11px", color: "#a5b4fc", fontWeight: "bold" }}>Suggested Match Found:</div>
               <div style={{ fontSize: "13px", fontWeight: "bold", margin: "4px 0" }}>
                 {suggestedMatch.title} ({suggestedMatch.platform})
@@ -360,6 +664,7 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
                   await loadAchievementsForApp(activeShortcutId);
                   setSuggestedMatch(null);
                   setIsLoading(false);
+                  showToast("OmniAchievements", `Linked to ${suggestedMatch.title}!`);
                 }}
               >
                 1-Click Link to {suggestedMatch.title}
@@ -368,25 +673,36 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
           </PanelSectionRow>
         )}
 
-        {!linkedGame && activeShortcutId && (
+        {/* Manual Library Browser / Game Selector */}
+        {!linkedGame && (
           <PanelSectionRow>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <span style={{ fontSize: "12px" }}>Link to OmniAchievements Game:</span>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", width: "100%" }}>
+              <span style={{ fontSize: "11px", color: "#888" }}>
+                {activeShortcutId ? "Link Shortcut to OmniAchievements Game:" : "Browse & View Achievements for Game:"}
+              </span>
               <select
-                style={{ padding: "8px", borderRadius: "8px", background: "#222", color: "#fff" }}
+                style={{ padding: "8px", borderRadius: "8px", background: "#222", color: "#fff", width: "100%", fontSize: "12px" }}
                 value={selectedGameId}
-                onChange={(e) => setSelectedGameId(e.target.value)}
+                onChange={(e) => {
+                  const gId = e.target.value;
+                  setSelectedGameId(gId);
+                  if (gId) {
+                    loadAchievementsForApp(gId);
+                  }
+                }}
               >
-                <option value="">-- Choose game to link --</option>
+                <option value="">-- Choose game from library ({availableGames.length}) --</option>
                 {availableGames.map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.title} ({g.platform})
                   </option>
                 ))}
               </select>
-              <ButtonItem layout="below" onClick={handleLinkGame}>
-                Link Game & Load Achievements
-              </ButtonItem>
+              {activeShortcutId && selectedGameId && (
+                <ButtonItem layout="below" onClick={handleLinkGame}>
+                  Link Game &amp; Load Achievements
+                </ButtonItem>
+              )}
             </div>
           </PanelSectionRow>
         )}
@@ -397,7 +713,7 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
             <PanelSectionRow>
               <div style={{ width: "100%", padding: "4px 0" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px" }}>
-                  <span>{linkedGame.title}</span>
+                  <span style={{ fontWeight: "bold" }}>{linkedGame.title}</span>
                   <span>{unlockedCount} / {totalCount} ({Math.round(progressPct)}%)</span>
                 </div>
                 <ProgressBar nProgress={progressPct} />
@@ -462,6 +778,19 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
                   );
                 })}
               </div>
+            </PanelSectionRow>
+
+            {/* Unlink / Change Game Option */}
+            <PanelSectionRow>
+              <ButtonItem
+                layout="below"
+                onClick={() => {
+                  setLinkedGame(null);
+                  setAchievements([]);
+                }}
+              >
+                Change Selected Game
+              </ButtonItem>
             </PanelSectionRow>
           </>
         )}

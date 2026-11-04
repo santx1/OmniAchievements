@@ -5,9 +5,41 @@ import urllib.error
 import urllib.parse
 import ssl
 import re
+import glob
 
-CONFIG_PATH = os.path.expanduser("~/.config/omni_achievements_decky.json")
 PLUGIN_DIR = os.path.dirname(os.path.realpath(__file__))
+
+def get_config_path():
+    """Determine the safest persistent path for plugin configuration on SteamOS/Linux."""
+    # 1. Decky Loader official settings directory
+    settings_dir = os.environ.get("DECKY_PLUGIN_SETTINGS_DIR")
+    if settings_dir:
+        try:
+            os.makedirs(settings_dir, exist_ok=True)
+            return os.path.join(settings_dir, "config.json")
+        except Exception:
+            pass
+
+    # 2. Check /home/deck (default SteamOS user) or current user home
+    user_home = "/home/deck" if os.path.isdir("/home/deck") else (os.environ.get("DECKY_USER_HOME") or os.environ.get("HOME") or os.path.expanduser("~"))
+
+    candidate_paths = [
+        os.path.join(user_home, "homebrew", "settings", "OmniAchievements", "config.json"),
+        os.path.join(user_home, ".config", "omni_achievements_decky.json"),
+        os.path.join(user_home, ".config", "omni_achievements", "config.json"),
+        os.path.expanduser("~/.config/omni_achievements_decky.json")
+    ]
+
+    for p in candidate_paths:
+        if os.path.exists(p):
+            return p
+
+    fallback = os.path.join(user_home, ".config", "omni_achievements_decky.json")
+    try:
+        os.makedirs(os.path.dirname(fallback), exist_ok=True)
+    except Exception:
+        pass
+    return fallback
 
 class Plugin:
     def __init__(self):
@@ -16,22 +48,26 @@ class Plugin:
         self.load_config()
 
     def load_config(self):
-        if os.path.exists(CONFIG_PATH):
+        config_path = get_config_path()
+        if os.path.exists(config_path):
             try:
-                with open(CONFIG_PATH, "r") as f:
+                with open(config_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     self.server_url = data.get("server_url", self.server_url)
                     self.token = data.get("token", self.token)
+                    print(f"[OmniAchievements] Loaded config from {config_path} (has_token: {bool(self.token)})")
             except Exception as e:
-                print(f"[OmniAchievements] Failed to load config: {e}")
+                print(f"[OmniAchievements] Failed to load config from {config_path}: {e}")
 
     def save_config(self):
+        config_path = get_config_path()
         try:
-            os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
-            with open(CONFIG_PATH, "w") as f:
-                json.dump({"server_url": self.server_url, "token": self.token}, f)
+            os.makedirs(os.path.dirname(config_path), exist_ok=True)
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump({"server_url": self.server_url, "token": self.token}, f, indent=2)
+            print(f"[OmniAchievements] Saved config to {config_path} (has_token: {bool(self.token)})")
         except Exception as e:
-            print(f"[OmniAchievements] Failed to save config: {e}")
+            print(f"[OmniAchievements] Failed to save config to {config_path}: {e}")
 
     def _api_request(self, endpoint, method="GET", body=None):
         url = f"{self.server_url.rstrip('/')}/api/decky{endpoint}"
@@ -48,7 +84,7 @@ class Plugin:
         ctx.verify_mode = ssl.CERT_NONE
 
         try:
-            with urllib.request.urlopen(req, timeout=8, context=ctx) as response:
+            with urllib.request.urlopen(req, timeout=6, context=ctx) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             err_body = e.read().decode("utf-8")
@@ -56,37 +92,103 @@ class Plugin:
                 return json.loads(err_body)
             except:
                 return {"error": f"HTTP {e.code}"}
+        except urllib.error.URLError as e:
+            return {"error": f"Connection failed: {e.reason}"}
         except Exception as e:
             return {"error": str(e)}
 
-    # Async methods called from Decky Loader frontend (supporting both args, kwargs, and dict payloads)
+    # Async methods called from Decky Loader frontend
     async def configure(self, *args, **kwargs):
-        server_url = self.server_url
-        token = self.token
+        data = {}
         if len(args) == 1 and isinstance(args[0], dict):
-            kwargs.update(args[0])
+            data.update(args[0])
         elif len(args) >= 2:
-            server_url = str(args[0])
-            token = str(args[1])
-        if "server_url" in kwargs:
-            server_url = str(kwargs["server_url"])
-        if "token" in kwargs:
-            token = str(kwargs["token"])
+            data["server_url"] = args[0]
+            data["token"] = args[1]
+        data.update(kwargs)
 
-        self.server_url = server_url.strip()
-        self.token = token.strip()
+        if "server_url" in data and data["server_url"]:
+            raw_url = str(data["server_url"]).strip()
+            if not raw_url.startswith("http://") and not raw_url.startswith("https://"):
+                raw_url = f"http://{raw_url}"
+            self.server_url = raw_url
+
+        # Crucial: Only overwrite token if a non-empty string was provided, so closing the menu never erases it!
+        if "token" in data:
+            val = str(data["token"]).strip()
+            if val:
+                self.token = val
+
         self.save_config()
         return await self.check_connection()
 
     async def get_config(self, *args, **kwargs):
         return {
             "server_url": self.server_url,
+            "token": self.token,
             "has_token": bool(self.token)
         }
 
     async def check_connection(self, *args, **kwargs):
-        res = self._api_request("/ping")
-        return {"online": res.get("status") == "online", "details": res}
+        if not self.server_url:
+            return {
+                "online": False,
+                "authenticated": False,
+                "error": "Server URL is not set"
+            }
+
+        # 1. Ping the server
+        ping_res = self._api_request("/ping")
+        if "error" in ping_res:
+            err_str = str(ping_res["error"])
+            return {
+                "online": False,
+                "authenticated": False,
+                "server_url": self.server_url,
+                "error": f"Cannot reach server ({err_str}). Check IP, port, and Wi-Fi."
+            }
+
+        if ping_res.get("status") != "online":
+            return {
+                "online": False,
+                "authenticated": False,
+                "server_url": self.server_url,
+                "error": "Unexpected server response (status is not online)"
+            }
+
+        server_ver = ping_res.get("version", "unknown")
+
+        # 2. Check token authentication if token is provided
+        if not self.token:
+            return {
+                "online": True,
+                "authenticated": False,
+                "server_url": self.server_url,
+                "server_version": server_ver,
+                "warning": f"Server online (v{server_ver})! Pairing Token is missing. Paste your token from Settings > Legion Go / Decky."
+            }
+
+        games_res = self._api_request("/games")
+        if "error" in games_res:
+            err = games_res.get("error", "Unauthorized")
+            return {
+                "online": True,
+                "authenticated": False,
+                "server_url": self.server_url,
+                "server_version": server_ver,
+                "error": f"Server online, but Pairing Token rejected: {err}"
+            }
+
+        games_list = games_res.get("games", []) if isinstance(games_res, dict) else (games_res if isinstance(games_res, list) else [])
+
+        return {
+            "online": True,
+            "authenticated": True,
+            "server_url": self.server_url,
+            "server_version": server_ver,
+            "game_count": len(games_list),
+            "message": f"Connected! Server v{server_ver} • {len(games_list)} games synced"
+        }
 
     async def get_games(self, *args, **kwargs):
         return self._api_request("/games")
@@ -164,16 +266,56 @@ class Plugin:
             "minutes": minutes
         })
 
+    async def detect_running_game(self, *args, **kwargs):
+        """Scan Linux system processes in SteamOS for SteamAppId or SteamGameId."""
+        try:
+            for p in glob.glob("/proc/[0-9]*/environ"):
+                try:
+                    with open(p, "rb") as f:
+                        content = f.read()
+                        if b"SteamAppId=" in content or b"SteamGameId=" in content:
+                            env = {}
+                            for item in content.split(b"\x00"):
+                                if b"=" in item:
+                                    k, v = item.split(b"=", 1)
+                                    env[k.decode("utf-8", "ignore")] = v.decode("utf-8", "ignore")
+                            app_id = env.get("SteamAppId") or env.get("SteamGameId")
+                            if app_id and app_id not in ("0", "769"):
+                                # Extract title from install path if present
+                                title = ""
+                                install_path = env.get("STEAM_COMPAT_INSTALL_PATH", "")
+                                if install_path:
+                                    title = os.path.basename(install_path.rstrip("/"))
+
+                                # Read process comm name
+                                pid_dir = os.path.dirname(p)
+                                comm_path = os.path.join(pid_dir, "comm")
+                                proc_name = ""
+                                if os.path.exists(comm_path):
+                                    with open(comm_path, "r", encoding="utf-8", errors="ignore") as cf:
+                                        proc_name = cf.read().strip()
+
+                                return {
+                                    "app_id": str(app_id),
+                                    "app_title": title or proc_name,
+                                    "process_name": proc_name
+                                }
+                except (PermissionError, FileNotFoundError, ProcessLookupError):
+                    continue
+        except Exception as e:
+            print(f"[OmniAchievements] detect_running_game error: {e}")
+        return {"app_id": None}
+
     def get_local_version(self):
         try:
             plugin_path = os.path.join(PLUGIN_DIR, "plugin.json")
             if os.path.exists(plugin_path):
                 with open(plugin_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    return data.get("version", "0.2.2")
+                    return data.get("version", "0.2.3")
         except Exception as e:
             print(f"[OmniAchievements] Error reading local version: {e}")
-        return "0.2.2"
+        return "0.2.3"
 
     def _compare_versions(self, v1, v2):
         try:
