@@ -136,25 +136,21 @@ jobs:
           echo "- **\`b\`**: Major feature updates" >> release_notes.md
           echo "- **\`c\`**: Minor improvements and bug fixes" >> release_notes.md
 
-          # 1. Create or update the specific versioned release (e.g. v0.1.0)
+          # 1. Clean up legacy 'latest' pseudo-release and tag if present
+          if gh release view "latest" >/dev/null 2>&1; then
+            echo "Deleting legacy 'latest' pseudo-release to keep only numbered releases..."
+            gh release delete "latest" -y --cleanup-tag || true
+          fi
+
+          # 2. Publish or update the numbered release (e.g. v0.2.0) with GitHub's 'Latest' badge
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists. Uploading updated packages..."
+            echo "Release $TAG already exists. Uploading updated packages and marking as Latest..."
             gh release upload "$TAG" "$IPA_PATH" "$DECKY_PATH" --clobber
+            gh release edit "$TAG" --title "$RELEASE_TITLE" --notes-file release_notes.md --latest
           else
-            echo "Creating new release $TAG..."
+            echo "Creating new numbered release $TAG with Latest tag..."
             gh release create "$TAG" "$IPA_PATH" "$DECKY_PATH" \
               --title "$RELEASE_TITLE" \
               --notes-file release_notes.md \
               --latest
-          fi
-
-          # 2. Synchronize rolling 'latest' release for automated download channels
-          if [ "$TAG" != "latest" ]; then
-            if gh release view "latest" >/dev/null 2>&1; then
-              gh release upload "latest" "$IPA_PATH" "$DECKY_PATH" --clobber
-            else
-              gh release create "latest" "$IPA_PATH" "$DECKY_PATH" \
-                --title "OmniAchievements Latest" \
-                --notes-file release_notes.md
-            fi
           fi
