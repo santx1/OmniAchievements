@@ -1,6 +1,6 @@
 {
   "name": "omniachievements-decky",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Decky Loader plugin for OmniAchievements",
   "scripts": {
     "build": "npx esbuild src/index.tsx --bundle --format=esm --external:react --external:react-dom --external:decky-frontend-lib --external:@decky/ui --external:@decky/api --target=es2020 --outfile=dist/index.js && cp dist/index.js ./index.js",

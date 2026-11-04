@@ -39,7 +39,7 @@ export const StatisticsView: React.FC = () => {
     return (
       <div className="p-12 flex flex-col items-center justify-center text-slate-400">
         <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-medium">Crunching your game & achievement analytics...</p>
+        <p className="text-sm font-medium">{t('stats.loadingAnalytics')}</p>
       </div>
     );
   }
@@ -145,7 +145,7 @@ export const StatisticsView: React.FC = () => {
           <div className="flex items-center gap-2 mb-6">
             <PieIcon className="w-5 h-5 text-indigo-500" />
             <h3 className="font-bold text-base text-slate-900 dark:text-white">
-              Status Distribution Graphic
+              {t('stats.statusDistribution')}
             </h3>
           </div>
 
@@ -223,7 +223,7 @@ export const StatisticsView: React.FC = () => {
                   {summary.totalGames}
                 </span>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Games
+                  {t('stats.gamesLabel')}
                 </span>
               </div>
             </div>
@@ -232,25 +232,25 @@ export const StatisticsView: React.FC = () => {
             <div className="space-y-3 w-full sm:w-auto">
               <div className="flex items-center justify-between sm:justify-start gap-3">
                 <span className="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-glow-gold shrink-0" />
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">100% Completed:</span>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('stats.completed100Label')}</span>
                 <span className="text-xs font-bold text-amber-500">{summary.completed100} ({p100}%)</span>
               </div>
 
               <div className="flex items-center justify-between sm:justify-start gap-3">
                 <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 shrink-0" />
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Finished:</span>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('stats.finishedLabel')}</span>
                 <span className="text-xs font-bold text-emerald-500">{summary.finished} ({pFinished}%)</span>
               </div>
 
               <div className="flex items-center justify-between sm:justify-start gap-3">
                 <span className="w-3.5 h-3.5 rounded-full bg-indigo-500 shrink-0" />
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Playing:</span>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('stats.playingLabel')}</span>
                 <span className="text-xs font-bold text-indigo-500">{summary.playing} ({pPlaying}%)</span>
               </div>
 
               <div className="flex items-center justify-between sm:justify-start gap-3">
                 <span className="w-3.5 h-3.5 rounded-full bg-slate-500 shrink-0" />
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Backlog (Unplayed):</span>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('stats.backlogLabel')}</span>
                 <span className="text-xs font-bold text-slate-400">{summary.unplayed} ({pUnplayed}%)</span>
               </div>
             </div>
@@ -262,13 +262,13 @@ export const StatisticsView: React.FC = () => {
           <div className="flex items-center gap-2 mb-6">
             <Gamepad2 className="w-5 h-5 text-purple-500" />
             <h3 className="font-bold text-base text-slate-900 dark:text-white">
-              Platforms Breakdown
+              {t('stats.platformsBreakdown')}
             </h3>
           </div>
 
           <div className="space-y-4">
             {platforms.length === 0 ? (
-              <p className="text-xs text-slate-400">No games added yet.</p>
+              <p className="text-xs text-slate-400">{t('stats.noGamesAdded')}</p>
             ) : (
               platforms.map((p) => {
                 const pct = Math.round((p.count / total) * 100);
@@ -276,7 +276,7 @@ export const StatisticsView: React.FC = () => {
                   <div key={p.platform} className="space-y-1.5">
                     <div className="flex justify-between text-xs font-semibold text-slate-700 dark:text-slate-300">
                       <span className="capitalize">{p.platform}</span>
-                      <span>{p.count} games ({pct}%)</span>
+                      <span>{t('stats.gamesCountPct', { count: p.count, pct })}</span>
                     </div>
                     <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
                       <div
@@ -337,7 +337,7 @@ export const StatisticsView: React.FC = () => {
                   <p className="font-bold text-xs text-white truncate drop-shadow">{g.title}</p>
                   <p className="text-[10px] text-amber-400 font-semibold flex items-center gap-1 mt-0.5">
                     <Trophy className="w-3 h-3" />
-                    <span>{g.unlocked_achievements} Achs</span>
+                    <span>{t('stats.achsCount', { count: g.unlocked_achievements })}</span>
                   </p>
                 </div>
               </div>
@@ -384,7 +384,7 @@ export const StatisticsView: React.FC = () => {
                       {ach.game_title}
                     </p>
                     <span className="text-[10px] text-indigo-500 font-mono">
-                      {ach.unlocked_at ? new Date(ach.unlocked_at).toLocaleDateString() : 'Recent'}
+                      {ach.unlocked_at ? new Date(ach.unlocked_at).toLocaleDateString() : t('stats.recentBadge')}
                     </span>
                   </div>
                 </div>

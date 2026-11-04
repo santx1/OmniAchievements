@@ -124,13 +124,13 @@ export const SettingsView: React.FC = () => {
 
   const handleTriggerManualSync = async () => {
     setIsManualSyncing(true);
-    setSyncMsg('Synchronizing with cloud server...');
+    setSyncMsg(t('settings.syncingCloudMsg'));
     try {
       const res = await triggerSync();
       setSyncMsg(res.message);
       await loadStorageSummary();
     } catch (e: any) {
-      setSyncMsg(`Sync error: ${e.message}`);
+      setSyncMsg(`${t('common.error')}: ${e.message}`);
     } finally {
       setIsManualSyncing(false);
     }
@@ -159,9 +159,9 @@ export const SettingsView: React.FC = () => {
       });
       setPlatforms((prev) => [...prev, res.platform]);
       setNewPlatformName('');
-      setPlatformMsg('✓ New console tag added successfully!');
+      setPlatformMsg(t('settings.platformAddedSuccess'));
     } catch (err: any) {
-      setPlatformMsg(`✕ Failed: ${err.message}`);
+      setPlatformMsg(`✕ ${t('common.error')}: ${err.message}`);
     }
   };
 
@@ -180,9 +180,9 @@ export const SettingsView: React.FC = () => {
       });
       setPlatforms((prev) => prev.map((p) => p.id === editingPlatformId ? res.platform : p));
       setEditingPlatformId(null);
-      setPlatformMsg('✓ Console tag updated!');
+      setPlatformMsg(t('settings.platformUpdatedSuccess'));
     } catch (err: any) {
-      setPlatformMsg(`✕ Update failed: ${err.message}`);
+      setPlatformMsg(`✕ ${t('common.error')}: ${err.message}`);
     }
   };
 
@@ -190,9 +190,9 @@ export const SettingsView: React.FC = () => {
     try {
       await api.deletePlatform(id);
       setPlatforms((prev) => prev.filter((p) => p.id !== id));
-      setPlatformMsg('✓ Console tag deleted.');
+      setPlatformMsg(t('settings.platformDeletedSuccess'));
     } catch (err: any) {
-      setPlatformMsg(`✕ Delete failed: ${err.message}`);
+      setPlatformMsg(`✕ ${t('common.error')}: ${err.message}`);
     }
   };
 
@@ -213,7 +213,7 @@ export const SettingsView: React.FC = () => {
 
     const updated = [
       ...familyAccounts.filter((f) => f.steamId !== resolvedId),
-      { name: newFamilyName.trim() || 'Family Member', steamId: resolvedId }
+      { name: newFamilyName.trim() || (language === 'es' ? 'Familiar' : 'Family Member'), steamId: resolvedId }
     ];
 
     try {
@@ -224,9 +224,9 @@ export const SettingsView: React.FC = () => {
       setNewFamilyName('');
       setNewFamilySteamId('');
       await refreshActiveProfile();
-      setFamilyMsg('✓ Family account added! Run Steam Sync to import their games.');
+      setFamilyMsg(t('settings.familyAddedSuccess'));
     } catch (err: any) {
-      setFamilyMsg(`✕ Failed: ${err.message}`);
+      setFamilyMsg(`✕ ${t('common.error')}: ${err.message}`);
     } finally {
       setIsAddingFamily(false);
     }
@@ -241,9 +241,9 @@ export const SettingsView: React.FC = () => {
       });
       setFamilyAccounts(updated);
       await refreshActiveProfile();
-      setFamilyMsg('✓ Family account removed.');
+      setFamilyMsg(t('settings.familyRemovedSuccess'));
     } catch (err: any) {
-      setFamilyMsg(`✕ Failed: ${err.message}`);
+      setFamilyMsg(`✕ ${t('common.error')}: ${err.message}`);
     }
   };
 
@@ -278,7 +278,7 @@ export const SettingsView: React.FC = () => {
 
       if (newPin) {
         if (!/^\d{6}$/.test(newPin.trim())) {
-          setProfileErrorMsg('New PIN must be exactly 6 digits');
+          setProfileErrorMsg(t('settings.pinLengthError'));
           setIsUpdatingProfile(false);
           return;
         }
@@ -289,11 +289,11 @@ export const SettingsView: React.FC = () => {
       await api.updateProfile(activeProfile.id, payload);
       setLanguage(profileLang);
       await refreshActiveProfile();
-      setProfileSuccessMsg('Profile settings updated successfully!');
+      setProfileSuccessMsg(t('settings.profileSuccess'));
       setNewPin('');
       setCurrentPin('');
     } catch (err: any) {
-      setProfileErrorMsg(err.message || 'Failed to update profile');
+      setProfileErrorMsg(err.message || t('settings.profileError'));
     } finally {
       setIsUpdatingProfile(false);
     }
@@ -313,7 +313,7 @@ export const SettingsView: React.FC = () => {
 
       await api.updateSettings(payload);
       await loadServerSettings();
-      setServerSuccessMsg('Server settings saved successfully!');
+      setServerSuccessMsg(t('settings.serverSettingsSavedSuccess'));
       setMasterPasswordInput('');
     } catch (err: any) {
       console.error('Failed to update server settings', err);
@@ -342,9 +342,9 @@ export const SettingsView: React.FC = () => {
     const res = await api.testConnection(serverUrlInput);
     setIsTestingConnection(false);
     if (res.online) {
-      setConnectionStatus(`✓ Connected successfully! (${res.latencyMs}ms latency)`);
+      setConnectionStatus(t('settings.connectedSuccess', { latency: res.latencyMs }));
     } else {
-      setConnectionStatus('✕ Could not reach server. Check IP, port, or Wi-Fi.');
+      setConnectionStatus(t('settings.connectionFailed'));
     }
   };
 
@@ -360,9 +360,9 @@ export const SettingsView: React.FC = () => {
       a.download = `omniachievements-backup-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      setBackupMsg('✓ Backup downloaded successfully!');
+      setBackupMsg(t('settings.backupDownloadedSuccess'));
     } catch (err: any) {
-      setBackupMsg(`✕ Export failed: ${err.message}`);
+      setBackupMsg(`✕ ${t('common.error')}: ${err.message}`);
     } finally {
       setIsExporting(false);
     }
@@ -378,10 +378,10 @@ export const SettingsView: React.FC = () => {
       const text = await file.text();
       const json = JSON.parse(text);
       await api.importBackup(json);
-      setBackupMsg('✓ Backup restored successfully! Refreshing...');
+      setBackupMsg(t('settings.backupRestoredSuccess'));
       setTimeout(() => window.location.reload(), 1500);
     } catch (err: any) {
-      setBackupMsg(`✕ Restore failed: ${err.message}`);
+      setBackupMsg(`✕ ${t('common.error')}: ${err.message}`);
     } finally {
       setIsImporting(false);
     }
@@ -400,10 +400,10 @@ export const SettingsView: React.FC = () => {
       <div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
           <Settings className="w-7 h-7 text-indigo-500" />
-          <span>App & Profile Settings</span>
+          <span>{t('settings.pageTitle')}</span>
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Customize your profile, styling, integrations, and Legion Go SteamOS Decky plugin
+          {t('settings.pageSubtitle')}
         </p>
       </div>
 
@@ -415,9 +415,9 @@ export const SettingsView: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-base text-slate-900 dark:text-white">
-              Profile: {activeProfile?.name}
+              {t('settings.profileHeading', { name: activeProfile?.name || '' })}
             </h3>
-            <p className="text-xs text-slate-400">Manage name, avatar, 6-digit PIN and themes</p>
+            <p className="text-xs text-slate-400">{t('settings.profileSub')}</p>
           </div>
         </div>
 
@@ -426,7 +426,7 @@ export const SettingsView: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                Profile Name
+                {t('settings.profileNameLabel')}
               </label>
               <input
                 type="text"
@@ -439,13 +439,13 @@ export const SettingsView: React.FC = () => {
 
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                SteamID64
+                {t('settings.steamId64Label')}
               </label>
               <input
                 type="text"
                 value={steamId}
                 onChange={(e) => setSteamId(e.target.value)}
-                placeholder="17-digit SteamID64..."
+                placeholder={t('settings.steamId64Placeholder')}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-mono text-slate-900 dark:text-white"
               />
             </div>
@@ -454,7 +454,7 @@ export const SettingsView: React.FC = () => {
           {/* Avatar Chooser */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-2">
-              Color Silhouette Avatar
+              {t('settings.avatarColorLabel')}
             </label>
             <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-2">
               {NEUTRAL_AVATARS.map((p) => (
@@ -481,16 +481,16 @@ export const SettingsView: React.FC = () => {
             {/* Custom Picture URL */}
             <div className="mt-3 p-3 rounded-xl bg-slate-100/70 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800">
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
-                <span>Or Custom Picture URL</span>
+                <span>{t('settings.avatarCustomUrlLabel')}</span>
                 {avatar && !avatar.startsWith('data:') && (
-                  <span className="text-[10px] text-indigo-500 font-medium">Custom URL active</span>
+                  <span className="text-[10px] text-indigo-500 font-medium">{t('settings.avatarCustomActive')}</span>
                 )}
               </label>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex-shrink-0 flex items-center justify-center">
                   <img
                     src={avatar || DEFAULT_AVATAR}
-                    alt="Avatar preview"
+                    alt={t('settings.avatarPreview')}
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       (e.currentTarget as HTMLImageElement).src = DEFAULT_AVATAR;
@@ -501,12 +501,12 @@ export const SettingsView: React.FC = () => {
                   type="url"
                   value={avatar.startsWith('data:') ? '' : avatar}
                   onChange={(e) => setAvatar(e.target.value.trim() || DEFAULT_AVATAR)}
-                  placeholder="Paste direct image URL (https://...)"
+                  placeholder={t('settings.avatarUrlPlaceholder')}
                   className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1.5">
-                Paste any web image URL (e.g. Steam, Discord, Gravatar, Imgur) or click a color silhouette above.
+                {t('settings.avatarUrlHelp')}
               </p>
             </div>
           </div>
@@ -590,26 +590,26 @@ export const SettingsView: React.FC = () => {
           {/* RetroAchievements Integration */}
           <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
             <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400 block mb-2">
-              RetroAchievements (Optional - For Emulated Games)
+              {t('settings.retroHeading')}
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] text-slate-500 mb-1">Username</label>
+                <label className="block text-[11px] text-slate-500 mb-1">{t('settings.retroUsername')}</label>
                 <input
                   type="text"
                   value={retroUsername}
                   onChange={(e) => setRetroUsername(e.target.value)}
-                  placeholder="e.g. RetroPlayer"
+                  placeholder={t('settings.retroUsernamePlaceholder')}
                   className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white"
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-slate-500 mb-1">Web API Key</label>
+                <label className="block text-[11px] text-slate-500 mb-1">{t('settings.retroApiKey')}</label>
                 <input
                   type="password"
                   value={retroApiKey}
                   onChange={(e) => setRetroApiKey(e.target.value)}
-                  placeholder="Get from retroachievements.org/controlpanel.php"
+                  placeholder={t('settings.retroApiKeyPlaceholder')}
                   className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
                 />
               </div>
@@ -619,7 +619,7 @@ export const SettingsView: React.FC = () => {
           {/* Change 6-Digit PIN */}
           <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block mb-2">
-              Change 6-Digit Security PIN (Optional)
+              {t('settings.pinHeading')}
             </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -628,7 +628,7 @@ export const SettingsView: React.FC = () => {
                   maxLength={6}
                   value={currentPin}
                   onChange={(e) => setCurrentPin(e.target.value.replace(/\D/g, ''))}
-                  placeholder="Current 6-digit PIN..."
+                  placeholder={t('settings.currentPinPlaceholder')}
                   className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
                 />
               </div>
@@ -638,7 +638,7 @@ export const SettingsView: React.FC = () => {
                   maxLength={6}
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
-                  placeholder="New 6-digit PIN..."
+                  placeholder={t('settings.newPinPlaceholder')}
                   className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
                 />
               </div>
@@ -658,7 +658,7 @@ export const SettingsView: React.FC = () => {
             className="py-2.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs flex items-center gap-2 transition-colors shadow-md shadow-indigo-600/30"
           >
             <Save className="w-3.5 h-3.5" />
-            <span>{isUpdatingProfile ? 'Saving...' : 'Save Profile Changes'}</span>
+            <span>{isUpdatingProfile ? t('common.saving') : t('settings.saveProfileBtn')}</span>
           </button>
         </form>
       </div>
@@ -671,10 +671,10 @@ export const SettingsView: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-base text-slate-900 dark:text-white">
-              Console & Platform Tags
+              {t('settings.platformsHeading')}
             </h3>
             <p className="text-xs text-slate-400">
-              Customize console names, add new platforms (e.g. PS5, Nintendo 3DS, PS Vita), and assign custom colors
+              {t('settings.platformsSub')}
             </p>
           </div>
         </div>
@@ -682,7 +682,7 @@ export const SettingsView: React.FC = () => {
         {/* Existing Platform Tags List */}
         <div className="space-y-2">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block mb-1">
-            Active Consoles & Platforms:
+            {t('settings.activeConsoles')}
           </span>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
@@ -732,7 +732,7 @@ export const SettingsView: React.FC = () => {
                           type="button"
                           onClick={() => handleStartEditPlatform(p)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
-                          title="Edit console tag"
+                          title={t('settings.editConsoleTooltip')}
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
@@ -740,7 +740,7 @@ export const SettingsView: React.FC = () => {
                           type="button"
                           onClick={() => handleDeletePlatform(p.id)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors"
-                          title="Delete console tag"
+                          title={t('settings.deleteConsoleTooltip')}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -756,11 +756,11 @@ export const SettingsView: React.FC = () => {
         {/* Add New Console Tag Form */}
         <form onSubmit={handleAddPlatform} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-            Add New Console / Platform:
+            {t('settings.addNewConsole')}
           </span>
           <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center">
             <div className="flex items-center gap-2 shrink-0">
-              <label className="text-[11px] text-slate-500">Tag Color:</label>
+              <label className="text-[11px] text-slate-500">{t('settings.tagColorLabel')}</label>
               <input
                 type="color"
                 value={newPlatformColor}
@@ -772,7 +772,7 @@ export const SettingsView: React.FC = () => {
               type="text"
               value={newPlatformName}
               onChange={(e) => setNewPlatformName(e.target.value)}
-              placeholder="e.g. PlayStation 5, Nintendo 3DS, PS Vita, Emulators..."
+              placeholder={t('settings.newPlatformPlaceholder')}
               className="flex-grow px-3 py-2 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400"
             />
             <button
@@ -781,7 +781,7 @@ export const SettingsView: React.FC = () => {
               className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shrink-0 disabled:opacity-50"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Add Console Tag</span>
+              <span>{t('settings.addConsoleTagBtn')}</span>
             </button>
           </div>
           {platformMsg && (
@@ -800,10 +800,10 @@ export const SettingsView: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-base text-slate-900 dark:text-white">
-              Steam Family Sharing (Steam Families)
+              {t('settings.familyHeading')}
             </h3>
             <p className="text-xs text-slate-400">
-              Add family members who share their Steam games with you to synchronize their libraries
+              {t('settings.familySub')}
             </p>
           </div>
         </div>
@@ -811,20 +811,20 @@ export const SettingsView: React.FC = () => {
         {/* Informational Guidance Box */}
         <div className="p-3.5 rounded-2xl bg-purple-950/20 border border-purple-500/30 text-xs text-slate-300 space-y-1.5">
           <p className="font-semibold text-purple-300">
-            How Steam Family Sharing works with the Steam API:
+            {t('settings.familyHowTitle')}
           </p>
           <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-400">
             <li>
-              Valve's Steam API does <strong>not</strong> include borrowed family games when querying your own SteamID directly.
+              {t('settings.familyHow1')}
             </li>
             <li>
-              To import them, enter your family member's nickname and their <strong>17-digit SteamID64</strong> (or their Steam profile URL) below.
+              {t('settings.familyHow2')}
             </li>
             <li>
-              <strong>Crucial:</strong> Your family member's Steam profile <em>Privacy Settings &gt; Game details</em> must be set to <strong>Public</strong> so the Steam API is permitted to read their games.
+              {t('settings.familyHow3')}
             </li>
             <li>
-              OmniAchievements will pull all shared games, tag them with a purple <strong>Family Shared</strong> badge, and track <strong>your own</strong> unlocked achievements!
+              {t('settings.familyHow4')}
             </li>
           </ul>
         </div>
@@ -832,12 +832,12 @@ export const SettingsView: React.FC = () => {
         {/* Existing Family Accounts */}
         <div className="space-y-2">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 block">
-            Configured Family Accounts ({familyAccounts.length}):
+            {t('settings.configuredFamily', { count: familyAccounts.length })}
           </span>
 
           {familyAccounts.length === 0 ? (
             <p className="text-xs text-slate-400 italic py-1">
-              No family accounts added yet. Add a family member below to import their shared games!
+              {t('settings.noFamilyConfiguredMsg')}
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -858,7 +858,7 @@ export const SettingsView: React.FC = () => {
                     type="button"
                     onClick={() => handleRemoveFamilyAccount(fam.steamId)}
                     className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors shrink-0"
-                    title="Remove family account"
+                    title={t('settings.removeFamilyTooltip')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -871,21 +871,21 @@ export const SettingsView: React.FC = () => {
         {/* Add Family Account Form */}
         <form onSubmit={handleAddFamilyAccount} className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
           <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">
-            Add Family Member:
+            {t('settings.addFamilyMemberLabel')}
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
             <input
               type="text"
               value={newFamilyName}
               onChange={(e) => setNewFamilyName(e.target.value)}
-              placeholder="Nickname (e.g. Brother, Dad)"
+              placeholder={t('settings.familyNicknamePlaceholder')}
               className="sm:col-span-4 px-3 py-2 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white placeholder-slate-400"
             />
             <input
               type="text"
               value={newFamilySteamId}
               onChange={(e) => setNewFamilySteamId(e.target.value)}
-              placeholder="SteamID64 (17 digits) or Profile URL..."
+              placeholder={t('settings.familySteamIdInputPlaceholder')}
               className="sm:col-span-6 px-3 py-2 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400"
             />
             <button
@@ -894,7 +894,7 @@ export const SettingsView: React.FC = () => {
               className="sm:col-span-2 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center justify-center gap-1 transition-colors disabled:opacity-50"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>{isAddingFamily ? 'Adding...' : 'Add'}</span>
+              <span>{isAddingFamily ? t('settings.syncingCloud') : t('common.add')}</span>
             </button>
           </div>
           {familyMsg && (
@@ -920,15 +920,15 @@ export const SettingsView: React.FC = () => {
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                <span>Local Storage & Cloud Synchronization</span>
+                <span>{t('settings.localStorageHeading')}</span>
                 <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full ${
                   isOnline ? 'bg-emerald-500/15 text-emerald-500' : 'bg-slate-500/15 text-slate-400'
                 }`}>
-                  {isOnline ? 'Online' : 'Offline Mode'}
+                  {isOnline ? t('settings.onlineBadge') : t('settings.offlineBadge')}
                 </span>
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Data is saved locally in IndexedDB and automatically synchronized when connected
+                {t('settings.localStorageSub')}
               </p>
             </div>
           </div>
@@ -940,37 +940,37 @@ export const SettingsView: React.FC = () => {
             className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm shrink-0"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isManualSyncing ? 'animate-spin' : ''}`} />
-            <span>{isManualSyncing ? 'Syncing...' : 'Sync Cloud Now'}</span>
+            <span>{isManualSyncing ? t('settings.syncingCloud') : t('settings.syncCloudNow')}</span>
           </button>
         </div>
 
         {/* Status Metrics Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
           <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800">
-            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Local Games</span>
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">{t('settings.localGames')}</span>
             <span className="text-lg font-black text-slate-900 dark:text-white font-mono">
               {storageSummary?.gamesCount ?? '—'}
             </span>
           </div>
 
           <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800">
-            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Local Trophies</span>
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">{t('settings.localTrophies')}</span>
             <span className="text-lg font-black text-slate-900 dark:text-white font-mono">
               {storageSummary?.achievementsCount ?? '—'}
             </span>
           </div>
 
           <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800">
-            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Pending Sync</span>
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">{t('settings.pendingSync')}</span>
             <span className={`text-lg font-black font-mono ${pendingCount > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
-              {pendingCount} changes
+              {t('settings.pendingChangesCount', { count: pendingCount })}
             </span>
           </div>
 
           <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800">
-            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">Last Cloud Sync</span>
+            <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block mb-1">{t('settings.lastCloudSync')}</span>
             <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300 block truncate">
-              {lastSyncTime ? new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Never'}
+              {lastSyncTime ? new Date(lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : t('settings.never')}
             </span>
           </div>
         </div>
@@ -990,24 +990,24 @@ export const SettingsView: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-base text-slate-900 dark:text-white">
-              Server Network Connection (iOS / iPadOS)
+              {t('settings.serverNetworkHeading')}
             </h3>
             <p className="text-xs text-slate-400">
-              Set local IP or remote domain/Tailscale URL for handheld & mobile access
+              {t('settings.serverNetworkSub')}
             </p>
           </div>
         </div>
 
         <div className="space-y-2">
           <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            OmniAchievements Server URL
+            {t('settings.serverUrlLabel')}
           </label>
           <div className="flex gap-2">
             <input
               type="text"
               value={serverUrlInput}
               onChange={(e) => setServerUrlInput(e.target.value)}
-              placeholder="e.g. http://192.168.1.100:3001 or https://games.yourdomain.com"
+              placeholder={t('settings.serverUrlPlaceholder')}
               className="flex-grow px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
             />
             <button
@@ -1016,7 +1016,7 @@ export const SettingsView: React.FC = () => {
               disabled={isTestingConnection}
               className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shrink-0 transition-colors"
             >
-              {isTestingConnection ? 'Testing...' : 'Save & Test'}
+              {isTestingConnection ? t('settings.testingConnection') : t('settings.saveAndTest')}
             </button>
           </div>
           {connectionStatus && (
@@ -1035,10 +1035,10 @@ export const SettingsView: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-base text-slate-900 dark:text-white">
-              Database Backups & Disaster Recovery
+              {t('settings.backupsHeading')}
             </h3>
             <p className="text-xs text-slate-400">
-              Automated daily SQLite snapshots are saved in <code className="text-slate-400">./data/backups/</code>
+              {t('settings.backupsSub')}
             </p>
           </div>
         </div>
@@ -1051,7 +1051,7 @@ export const SettingsView: React.FC = () => {
             className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors flex items-center gap-1.5"
           >
             <Save className="w-3.5 h-3.5 text-indigo-400" />
-            <span>{isExporting ? 'Exporting...' : 'Download Full Backup (JSON)'}</span>
+            <span>{isExporting ? t('settings.exportingBackup') : t('settings.downloadBackup')}</span>
           </button>
 
           <label className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer">
@@ -1063,7 +1063,7 @@ export const SettingsView: React.FC = () => {
               className="hidden"
             />
             <Server className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{isImporting ? 'Restoring...' : 'Restore from Backup (JSON)'}</span>
+            <span>{isImporting ? t('settings.restoringBackup') : t('settings.restoreBackup')}</span>
           </label>
         </div>
 
@@ -1082,34 +1082,34 @@ export const SettingsView: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-base text-slate-900 dark:text-white">
-              Legion Go S / SteamOS Decky Plugin
+              {t('settings.deckyPluginHeading')}
             </h3>
             <p className="text-xs text-slate-400">
-              Sync custom achievements with non-Steam games in SteamOS Quick Access Menu
+              {t('settings.deckyPluginSub')}
             </p>
           </div>
         </div>
 
         <div className="p-4 rounded-2xl bg-cyan-950/20 border border-cyan-500/20 text-xs text-slate-300 space-y-2">
           <p>
-            The <strong>OmniAchievements Decky Plugin</strong> is installed on your Legion Go or Steam Deck running SteamOS. It seamlessly injects achievements into non-Steam shortcuts just like official Steam achievements!
+            {t('settings.deckyIntro')}
           </p>
           <ul className="list-disc pl-5 space-y-1 text-slate-400">
-            <li>Open the Quick Access Menu (QAM) in SteamOS while playing any linked non-Steam game.</li>
-            <li>Shows unlocked and locked trophies directly on the screen overlay.</li>
-            <li>Connects directly to your self-hosted Docker server on your local network.</li>
+            <li>{t('settings.deckyBullet1')}</li>
+            <li>{t('settings.deckyBullet2')}</li>
+            <li>{t('settings.deckyBullet3')}</li>
           </ul>
         </div>
 
         <div className="space-y-2">
           <span className="text-xs font-semibold text-slate-300 block">
-            Generate Decky Device Pairing Token:
+            {t('settings.deckyPairingTokenLabel')}
           </span>
           <div className="flex gap-2">
             <input
               type="text"
               readOnly
-              value={pairingToken || 'Click "Generate Token" to pair Legion Go...'}
+              value={pairingToken || t('settings.deckyPairingTokenPlaceholder')}
               className="flex-grow px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-cyan-300"
             />
             {pairingToken ? (
@@ -1119,7 +1119,7 @@ export const SettingsView: React.FC = () => {
                 className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
                 {copiedToken ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedToken ? 'Copied' : 'Copy'}</span>
+                <span>{copiedToken ? t('settings.copiedTokenBtn') : t('settings.copyTokenBtn')}</span>
               </button>
             ) : (
               <button
@@ -1128,7 +1128,7 @@ export const SettingsView: React.FC = () => {
                 disabled={isGeneratingPairToken}
                 className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold transition-colors"
               >
-                {isGeneratingPairToken ? 'Generating...' : 'Generate Token'}
+                {isGeneratingPairToken ? t('settings.generatingTokenBtn') : t('settings.generateTokenBtn')}
               </button>
             )}
           </div>
@@ -1143,52 +1143,52 @@ export const SettingsView: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-base text-slate-900 dark:text-white">
-              Server & Master Password Settings
+              {t('settings.serverConfigHeading')}
             </h3>
-            <p className="text-xs text-slate-400">Manage self-hosted Docker server credentials & API keys</p>
+            <p className="text-xs text-slate-400">{t('settings.serverConfigSub')}</p>
           </div>
         </div>
 
         <form onSubmit={handleUpdateServerSettings} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-              Update Master Gateway Password
+              {t('settings.updateMasterPasswordLabel')}
             </label>
             <input
               type="password"
               value={masterPasswordInput}
               onChange={(e) => setMasterPasswordInput(e.target.value)}
-              placeholder="Enter new master password (min 6 characters)..."
+              placeholder={t('settings.updateMasterPasswordPlaceholder')}
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
             />
             <p className="text-[11px] text-slate-500 mt-1">
-              Protects web access before profile selection. Saved to <code className="text-slate-400">data/config.json</code>.
+              {t('settings.masterPasswordHelp')}
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                Global Steam Web API Key
+                {t('settings.globalSteamApiKeyLabel')}
               </label>
               <input
                 type="text"
                 value={steamApiKeyInput}
                 onChange={(e) => setSteamApiKeyInput(e.target.value)}
-                placeholder={serverSettings?.steamApiKeyMasked || 'Enter Steam Web API Key...'}
+                placeholder={serverSettings?.steamApiKeyMasked || t('settings.globalSteamApiKeyPlaceholder')}
                 className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-                SteamGridDB API Key
+                {t('settings.steamGridDbApiKeyLabel')}
               </label>
               <input
                 type="text"
                 value={steamGridDbApiKeyInput}
                 onChange={(e) => setSteamGridDbApiKeyInput(e.target.value)}
-                placeholder={serverSettings?.steamGridDbApiKeyMasked || 'Enter SteamGridDB API Key...'}
+                placeholder={serverSettings?.steamGridDbApiKeyMasked || t('settings.steamGridDbApiKeyPlaceholder')}
                 className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
               />
             </div>
@@ -1196,7 +1196,7 @@ export const SettingsView: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  Google Gemini API Key (AI Achievements)
+                  {t('settings.geminiApiKeyLabel')}
                 </label>
                 <a
                   href="https://aistudio.google.com/app/apikey"
@@ -1204,7 +1204,7 @@ export const SettingsView: React.FC = () => {
                   rel="noreferrer"
                   className="text-[11px] text-indigo-500 hover:underline flex items-center gap-1"
                 >
-                  <span>Free Key</span>
+                  <span>{t('settings.freeKey')}</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
@@ -1212,7 +1212,7 @@ export const SettingsView: React.FC = () => {
                 type="text"
                 value={geminiApiKeyInput}
                 onChange={(e) => setGeminiApiKeyInput(e.target.value)}
-                placeholder={serverSettings?.geminiApiKeyMasked || 'Enter Gemini API Key (for automatic AI achievement generation)...'}
+                placeholder={serverSettings?.geminiApiKeyMasked || t('settings.geminiApiKeyPlaceholder')}
                 className="w-full px-3 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono text-slate-900 dark:text-white"
               />
             </div>
@@ -1228,7 +1228,7 @@ export const SettingsView: React.FC = () => {
             className="py-2.5 px-5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs flex items-center gap-2 transition-colors shadow-md shadow-purple-600/30"
           >
             <Save className="w-3.5 h-3.5" />
-            <span>{isUpdatingServer ? 'Saving...' : 'Save Server Settings'}</span>
+            <span>{isUpdatingServer ? t('common.saving') : t('settings.saveServerSettingsBtn')}</span>
           </button>
         </form>
       </div>
@@ -1237,15 +1237,15 @@ export const SettingsView: React.FC = () => {
       <div className="p-6 rounded-3xl bg-emerald-950/20 border border-emerald-500/30 text-xs text-slate-300 space-y-2">
         <div className="flex items-center gap-2 text-emerald-400 font-bold">
           <ShieldCheck className="w-5 h-5" />
-          <span>Steam Account Security Architecture</span>
+          <span>{t('settings.securityArchitectureHeading')}</span>
         </div>
         <p>
-          OmniAchievements is designed from the ground up to guarantee that your Steam account can never be compromised:
+          {t('settings.securityArchitectureIntro')}
         </p>
         <ul className="list-disc pl-5 space-y-1 text-slate-400">
-          <li><strong>Zero credential access:</strong> We never prompt for, intercept, or store your Steam password or Steam Guard authentication codes.</li>
-          <li><strong>Read-only Web API:</strong> All synchronization uses Valve's official public API (`ISteamUserStats` & `IPlayerService`), which only grants read-only access to public achievements and playtime.</li>
-          <li><strong>Self-hosted & Local:</strong> Your database resides on your own local server; no third-party cloud service has access to your library or profiles.</li>
+          <li>{t('settings.securityBullet1')}</li>
+          <li>{t('settings.securityBullet2')}</li>
+          <li>{t('settings.securityBullet3')}</li>
         </ul>
       </div>
     </div>
