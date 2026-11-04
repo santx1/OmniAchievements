@@ -1,15 +1,13 @@
 import {
-  definePlugin,
   PanelSection,
   PanelSectionRow,
   ButtonItem,
   TextField,
   ProgressBar,
   Focusable,
-  ServerAPI,
   staticClasses
-} from "decky-frontend-lib";
-import React, { VFC, useState, useEffect } from "react";
+} from "@decky/ui";
+import React, { FC, useState, useEffect } from "react";
 
 // Self-contained icons for SteamOS Decky Loader (no external npm dependencies required)
 const TrophyIcon = ({ color = "#f59e0b", size = 16 }: { color?: string; size?: number }) => (
@@ -47,7 +45,54 @@ interface Achievement {
   is_unlocked: number;
 }
 
-const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
+// Global reference for serverApi if provided by legacy/eval loader
+let globalServerApi: any = null;
+
+// Universal backend invocation bridge supporting Decky v2, v3, and standalone loaders
+async function callBackend(method: string, args: Record<string, any> = {}): Promise<any> {
+  // 1. Try serverApi if passed to definePlugin
+  if (globalServerApi && typeof globalServerApi.callPluginMethod === "function") {
+    try {
+      const res = await globalServerApi.callPluginMethod(method, args);
+      return res?.result !== undefined ? res.result : res;
+    } catch (e) {
+      console.warn(`[OmniAchievements] globalServerApi.callPluginMethod("${method}") failed:`, e);
+    }
+  }
+
+  // 2. Try window.DeckyBackend if available
+  try {
+    const deckyBackend = (window as any).DeckyBackend;
+    if (deckyBackend && typeof deckyBackend.call === "function") {
+      const res = await deckyBackend.call("loader/call_plugin_method", "OmniAchievements", method, args);
+      return res?.result !== undefined ? res.result : res;
+    }
+  } catch (e) {
+    console.warn(`[OmniAchievements] DeckyBackend.call("${method}") failed:`, e);
+  }
+
+  // 3. Try window.__DECKY_SECRET_INTERNALS_... if available
+  try {
+    const loaderInit = (window as any).__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit;
+    if (loaderInit && typeof loaderInit.connect === "function") {
+      const api = loaderInit.connect(2, "OmniAchievements");
+      if (api && typeof api.call === "function") {
+        const res = await api.call(method, args);
+        return res?.result !== undefined ? res.result : res;
+      }
+    }
+  } catch (e) {
+    console.warn(`[OmniAchievements] loaderInit.connect("${method}") failed:`, e);
+  }
+
+  return { error: "No backend communication method available" };
+}
+
+const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
+  if (serverApi) {
+    globalServerApi = serverApi;
+  }
+
   const [serverUrl, setServerUrl] = useState("http://192.168.1.100:3001");
   const [token, setToken] = useState("");
   const [isConnected, setIsConnected] = useState(false);
@@ -62,7 +107,7 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Self-Updater state
-  const [currentVersion, setCurrentVersion] = useState("1.0.0");
+  const [currentVersion, setCurrentVersion] = useState("0.2.2");
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateSource, setUpdateSource] = useState<"auto" | "server" | "github">("auto");
@@ -73,15 +118,15 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
 
   // Load config on mount
   useEffect(() => {
-    serverApi.callPluginMethod("get_config", {}).then((res: any) => {
-      if (res.result) {
-        setServerUrl(res.result.server_url || "http://192.168.1.100:3001");
+    callBackend("get_config").then((res: any) => {
+      if (res && res.server_url) {
+        setServerUrl(res.server_url || "http://192.168.1.100:3001");
       }
     });
 
-    serverApi.callPluginMethod("get_plugin_version", {}).then((res: any) => {
-      if (res.result?.version) {
-        setCurrentVersion(res.result.version);
+    callBackend("get_plugin_version").then((res: any) => {
+      if (res?.version) {
+        setCurrentVersion(res.version);
       }
     });
 
@@ -90,7 +135,7 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
     // Periodic playtime logger every 5 minutes while gaming
     const interval = setInterval(() => {
       if (activeShortcutId && linkedGame) {
-        serverApi.callPluginMethod("log_playtime", {
+        callBackend("log_playtime", {
           shortcut_id: activeShortcutId,
           game_id: linkedGame.id,
           minutes: 5
@@ -112,15 +157,15 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
         setActiveShortcutName(appTitle);
 
         // Check if already linked
-        const achRes: any = await serverApi.callPluginMethod("get_achievements", { shortcut_id: appId });
-        if (achRes.result && achRes.result.linked) {
-          setLinkedGame(achRes.result.game);
-          setAchievements(achRes.result.achievements || []);
+        const achRes: any = await callBackend("get_achievements", { shortcut_id: appId });
+        if (achRes && achRes.linked) {
+          setLinkedGame(achRes.game);
+          setAchievements(achRes.achievements || []);
         } else {
           // Trigger Fuzzy Match Auto-Suggestion
-          const matchRes: any = await serverApi.callPluginMethod("match_game", { shortcut_name: appTitle });
-          if (matchRes.result?.matches?.length > 0) {
-            setSuggestedMatch(matchRes.result.matches[0]);
+          const matchRes: any = await callBackend("match_game", { shortcut_name: appTitle });
+          if (matchRes?.matches?.length > 0) {
+            setSuggestedMatch(matchRes.matches[0]);
           }
         }
       }
@@ -131,12 +176,12 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
 
   const handleSaveConfig = async () => {
     setIsLoading(true);
-    const res: any = await serverApi.callPluginMethod("configure", {
+    const res: any = await callBackend("configure", {
       server_url: serverUrl,
       token: token
     });
     setIsLoading(false);
-    if (res.result && res.result.online) {
+    if (res && res.online) {
       setIsConnected(true);
       loadGames();
     } else {
@@ -145,19 +190,19 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
   };
 
   const loadGames = async () => {
-    const res: any = await serverApi.callPluginMethod("get_games", {});
-    if (res.result && Array.isArray(res.result.games)) {
-      setAvailableGames(res.result.games);
+    const res: any = await callBackend("get_games");
+    if (res && Array.isArray(res.games)) {
+      setAvailableGames(res.games);
     }
   };
 
   const loadAchievementsForApp = async (appId: string) => {
     setIsLoading(true);
-    const res: any = await serverApi.callPluginMethod("get_achievements", { shortcut_id: appId });
+    const res: any = await callBackend("get_achievements", { shortcut_id: appId });
     setIsLoading(false);
-    if (res.result && res.result.linked) {
-      setLinkedGame(res.result.game);
-      setAchievements(res.result.achievements || []);
+    if (res && res.linked) {
+      setLinkedGame(res.game);
+      setAchievements(res.achievements || []);
     } else {
       setLinkedGame(null);
       setAchievements([]);
@@ -167,7 +212,7 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
   const handleLinkGame = async () => {
     if (!activeShortcutId || !selectedGameId) return;
     setIsLoading(true);
-    await serverApi.callPluginMethod("link_shortcut", {
+    await callBackend("link_shortcut", {
       steam_shortcut_id: activeShortcutId,
       game_id: selectedGameId,
       shortcut_name: activeShortcutName
@@ -178,7 +223,7 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
 
   const handleToggleAchievement = async (ach: Achievement) => {
     const nextUnlocked = ach.is_unlocked === 1 ? false : true;
-    await serverApi.callPluginMethod("toggle_achievement", {
+    await callBackend("toggle_achievement", {
       achievement_id: ach.id,
       is_unlocked: nextUnlocked
     });
@@ -192,8 +237,7 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
     setUpdateStatusMsg("Checking for updates...");
     setUpdateSuccess(false);
     try {
-      const res: any = await serverApi.callPluginMethod("check_for_updates", { source });
-      const data = res.result;
+      const data: any = await callBackend("check_for_updates", { source });
       if (data) {
         setCurrentVersion(data.current_version || currentVersion);
         setLatestVersion(data.latest_version);
@@ -217,18 +261,19 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
     setIsApplyingUpdate(true);
     setUpdateStatusMsg("Downloading and applying update files...");
     try {
-      const res: any = await serverApi.callPluginMethod("apply_update", { source: updateSource });
-      const data = res.result;
+      const data: any = await callBackend("apply_update", { source: updateSource });
       if (data?.success) {
         setUpdateSuccess(true);
         setCurrentVersion(data.new_version);
         setUpdateAvailable(false);
         setUpdateStatusMsg(`✓ Successfully updated to v${data.new_version}! Reload Decky to apply.`);
         try {
-          (serverApi as any).toaster?.toast({
-            title: "OmniAchievements Updated",
-            body: `Plugin updated to v${data.new_version}!`
-          });
+          if (globalServerApi?.toaster?.toast) {
+            globalServerApi.toaster.toast({
+              title: "OmniAchievements Updated",
+              body: `Plugin updated to v${data.new_version}!`
+            });
+          }
         } catch (_) {}
       } else {
         setUpdateStatusMsg(`✕ Update error: ${data?.error || "Unknown error"}`);
@@ -307,7 +352,7 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
                 layout="below"
                 onClick={async () => {
                   setIsLoading(true);
-                  await serverApi.callPluginMethod("link_shortcut", {
+                  await callBackend("link_shortcut", {
                     steam_shortcut_id: activeShortcutId,
                     game_id: suggestedMatch.id,
                     shortcut_name: activeShortcutName
@@ -509,9 +554,19 @@ const Content: VFC<{ serverApi: ServerAPI }> = ({ serverApi }) => {
   );
 };
 
-export default definePlugin((serverApi: ServerAPI) => {
+// Official Decky definePlugin helper
+function defineDeckyPlugin(fn: (serverApi?: any) => any) {
+  return (...args: any[]) => fn(...args);
+}
+
+export default defineDeckyPlugin((serverApi?: any) => {
+  if (serverApi) {
+    globalServerApi = serverApi;
+  }
   return {
+    name: "OmniAchievements",
     title: <div className={staticClasses.Title}>OmniAchievements</div>,
+    titleView: <div className={staticClasses.Title}>OmniAchievements</div>,
     content: <Content serverApi={serverApi} />,
     icon: <TrophyIcon />,
     onDismount() {}

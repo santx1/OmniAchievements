@@ -59,52 +59,105 @@ class Plugin:
         except Exception as e:
             return {"error": str(e)}
 
-    # Async methods called from Decky Loader frontend
-    async def configure(self, server_url, token):
+    # Async methods called from Decky Loader frontend (supporting both args, kwargs, and dict payloads)
+    async def configure(self, *args, **kwargs):
+        server_url = self.server_url
+        token = self.token
+        if len(args) == 1 and isinstance(args[0], dict):
+            kwargs.update(args[0])
+        elif len(args) >= 2:
+            server_url = str(args[0])
+            token = str(args[1])
+        if "server_url" in kwargs:
+            server_url = str(kwargs["server_url"])
+        if "token" in kwargs:
+            token = str(kwargs["token"])
+
         self.server_url = server_url.strip()
         self.token = token.strip()
         self.save_config()
         return await self.check_connection()
 
-    async def get_config(self):
+    async def get_config(self, *args, **kwargs):
         return {
             "server_url": self.server_url,
             "has_token": bool(self.token)
         }
 
-    async def check_connection(self):
+    async def check_connection(self, *args, **kwargs):
         res = self._api_request("/ping")
         return {"online": res.get("status") == "online", "details": res}
 
-    async def get_games(self):
+    async def get_games(self, *args, **kwargs):
         return self._api_request("/games")
 
-    async def get_links(self):
+    async def get_links(self, *args, **kwargs):
         return self._api_request("/links")
 
-    async def link_shortcut(self, steam_shortcut_id, game_id, shortcut_name):
+    async def link_shortcut(self, *args, **kwargs):
+        data = {}
+        if len(args) == 1 and isinstance(args[0], dict):
+            data = args[0]
+        elif len(args) >= 3:
+            data = {"steam_shortcut_id": args[0], "game_id": args[1], "shortcut_name": args[2]}
+        data.update(kwargs)
+        steam_shortcut_id = data.get("steam_shortcut_id") or data.get("steamShortcutId")
+        game_id = data.get("game_id") or data.get("gameId")
+        shortcut_name = data.get("shortcut_name") or data.get("shortcutName", "")
         return self._api_request("/link", method="POST", body={
             "steamShortcutId": str(steam_shortcut_id),
             "gameId": str(game_id),
             "shortcutName": str(shortcut_name)
         })
 
-    async def unlink_shortcut(self, link_id):
+    async def unlink_shortcut(self, *args, **kwargs):
+        link_id = args[0] if args else (kwargs.get("link_id") or kwargs.get("linkId"))
         return self._api_request(f"/link/{link_id}", method="DELETE")
 
-    async def get_achievements(self, shortcut_id):
+    async def get_achievements(self, *args, **kwargs):
+        shortcut_id = None
+        if len(args) == 1 and isinstance(args[0], dict):
+            shortcut_id = args[0].get("shortcut_id") or args[0].get("shortcutId")
+        elif args:
+            shortcut_id = args[0]
+        else:
+            shortcut_id = kwargs.get("shortcut_id") or kwargs.get("shortcutId")
         return self._api_request(f"/achievements/{shortcut_id}")
 
-    async def toggle_achievement(self, achievement_id, is_unlocked):
+    async def toggle_achievement(self, *args, **kwargs):
+        data = {}
+        if len(args) == 1 and isinstance(args[0], dict):
+            data = args[0]
+        elif len(args) >= 2:
+            data = {"achievement_id": args[0], "is_unlocked": args[1]}
+        data.update(kwargs)
+        achievement_id = data.get("achievement_id") or data.get("achievementId")
+        is_unlocked = data.get("is_unlocked") if "is_unlocked" in data else data.get("isUnlocked", True)
         return self._api_request("/toggle-achievement", method="POST", body={
             "achievementId": achievement_id,
             "isUnlocked": is_unlocked
         })
 
-    async def match_game(self, shortcut_name):
-        return self._api_request(f"/match?name={urllib.parse.quote(shortcut_name)}")
+    async def match_game(self, *args, **kwargs):
+        shortcut_name = ""
+        if len(args) == 1 and isinstance(args[0], dict):
+            shortcut_name = args[0].get("shortcut_name", "")
+        elif args:
+            shortcut_name = str(args[0])
+        else:
+            shortcut_name = kwargs.get("shortcut_name", "")
+        return self._api_request(f"/match?name={urllib.parse.quote(str(shortcut_name))}")
 
-    async def log_playtime(self, shortcut_id, game_id, minutes):
+    async def log_playtime(self, *args, **kwargs):
+        data = {}
+        if len(args) == 1 and isinstance(args[0], dict):
+            data = args[0]
+        elif len(args) >= 3:
+            data = {"shortcut_id": args[0], "game_id": args[1], "minutes": args[2]}
+        data.update(kwargs)
+        shortcut_id = data.get("shortcut_id") or data.get("shortcutId")
+        game_id = data.get("game_id") or data.get("gameId")
+        minutes = data.get("minutes", 5)
         return self._api_request("/log-playtime", method="POST", body={
             "shortcutId": str(shortcut_id),
             "gameId": str(game_id) if game_id else None,
@@ -117,10 +170,10 @@ class Plugin:
             if os.path.exists(plugin_path):
                 with open(plugin_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    return data.get("version", "1.0.0")
+                    return data.get("version", "0.2.2")
         except Exception as e:
             print(f"[OmniAchievements] Error reading local version: {e}")
-        return "1.0.0"
+        return "0.2.2"
 
     def _compare_versions(self, v1, v2):
         try:
@@ -135,13 +188,21 @@ class Plugin:
         except Exception:
             return 1 if str(v1) != str(v2) else 0
 
-    async def get_plugin_version(self):
+    async def get_plugin_version(self, *args, **kwargs):
         return {
             "version": self.get_local_version(),
             "plugin_dir": PLUGIN_DIR
         }
 
-    async def check_for_updates(self, source="auto"):
+    async def check_for_updates(self, *args, **kwargs):
+        source = "auto"
+        if len(args) == 1 and isinstance(args[0], dict):
+            source = args[0].get("source", "auto")
+        elif args:
+            source = str(args[0])
+        else:
+            source = kwargs.get("source", "auto")
+
         current_ver = self.get_local_version()
         result = {
             "current_version": current_ver,
@@ -194,7 +255,15 @@ class Plugin:
 
         return result
 
-    async def apply_update(self, source="auto"):
+    async def apply_update(self, *args, **kwargs):
+        source = "auto"
+        if len(args) == 1 and isinstance(args[0], dict):
+            source = args[0].get("source", "auto")
+        elif args:
+            source = str(args[0])
+        else:
+            source = kwargs.get("source", "auto")
+
         current_ver = self.get_local_version()
         updated_files = []
         try:

@@ -1,23 +1,22 @@
 {
   "name": "omniachievements-decky",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Decky Loader plugin for OmniAchievements",
+  "type": "module",
   "scripts": {
-    "build": "npx esbuild src/index.tsx --bundle --format=esm --external:react --external:react-dom --external:decky-frontend-lib --external:@decky/ui --external:@decky/api --target=es2020 --outfile=dist/index.js && cp dist/index.js ./index.js",
-    "watch": "npx esbuild src/index.tsx --bundle --format=esm --external:react --external:react-dom --external:decky-frontend-lib --external:@decky/ui --external:@decky/api --target=es2020 --outfile=dist/index.js --watch"
-  },
-  "dependencies": {
-    "@decky/ui": "^4.0.0",
-    "decky-frontend-lib": "^4.0.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "build": "rollup -c && cp dist/index.js ./index.js",
+    "watch": "rollup -c -w"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^24.0.0",
-    "@rollup/plugin-node-resolve": "^15.0.0",
-    "@rollup/plugin-typescript": "^11.0.0",
-    "@types/react": "^18.0.0",
-    "rollup": "^3.0.0",
-    "typescript": "^5.0.0"
+    "@decky/rollup": "^1.0.2",
+    "@decky/ui": "^4.16.5",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "rollup": "^4.24.0",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@decky/api": "^1.1.3",
+    "tslib": "^2.8.1"
   }
 }

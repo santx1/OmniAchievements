@@ -77,8 +77,8 @@ jobs:
       - name: Build & Package Decky Loader Plugin
         run: |
           cd decky-plugin
-          npx -y esbuild src/index.tsx --bundle --format=esm --external:react --external:react-dom --external:decky-frontend-lib --external:@decky/ui --external:@decky/api --target=es2020 --outfile=dist/index.js
-          cp dist/index.js ./index.js
+          npm install
+          npm run build
           rm -f OmniAchievements-Decky.zip
           zip -r OmniAchievements-Decky.zip plugin.json package.json main.py dist index.js README.md
           unzip -t OmniAchievements-Decky.zip
