@@ -42,6 +42,7 @@ server/dist/
 
 # Capacitor & iOS build artifacts
 *.ipa
+*.zip
 *.xcarchive
 client/ios/App/build
 client/ios/App/Pods

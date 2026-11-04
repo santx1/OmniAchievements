@@ -154,24 +154,32 @@ The server will be available at:
 
 ---
 
-## 📱 Compiling the iOS & iPadOS IPA
+## 📦 Releases & Automated Builds
 
-You can compile the iOS/iPadOS app using **GitHub Actions with zero Mac requirements**:
-1. Push this repo to GitHub.
-2. Go to **Actions > Build iOS & iPadOS IPA > Run workflow**.
-3. Download the compiled `OmniAchievements.ipa` artifact.
-4. Sideload via **SideStore**, **AltStore**, **TrollStore**, or **Sideloadly**.
+Pre-compiled packages are automatically built and published to **GitHub Releases**:
+- 🍏 **`OmniAchievements.ipa`**: Unsigned iOS/iPadOS IPA ready for SideStore, AltStore, TrollStore, or Sideloadly.
+- 🕹️ **`OmniAchievements-Decky.zip`**: Pre-bundled Decky Loader plugin ready for Lenovo Legion Go & Steam Deck.
 
-📖 Read the complete [iOS & iPadOS IPA Compilation Guide](docs/IOS_IPA_BUILD_GUIDE.md).
+### 🏷️ Versioning Scheme (`a.b.c`)
+- **`a`**: Main architecture version (`0` currently)
+- **`b`**: Big feature updates (major integrations, new platforms, sync engines)
+- **`c`**: Minor enhancements and bug fixes
+
+To bump the version for a new release:
+```bash
+./scripts/bump-version.sh minor   # Bump 'c' for minor changes (e.g. 0.1.1)
+./scripts/bump-version.sh big     # Bump 'b' for big feature releases (e.g. 0.2.0)
+```
 
 ---
 
 ## 🎮 Installing on Legion Go S & Steam Deck (Decky Plugin)
 
-1. Copy the `decky-plugin/` folder to `~/homebrew/plugins/OmniAchievements` on your handheld.
-2. Restart Decky: `sudo systemctl restart plugin_loader.service`.
-3. Open the Quick Access Menu in game to link non-Steam titles and track achievements on your Legion Go!
-4. **Future Updates**: Update directly from Decky with 1 click using the built-in **Plugin Self-Updater**!
+1. Download **`OmniAchievements-Decky.zip`** from [GitHub Releases](https://github.com/santx1/OmniAchievements/releases).
+2. Extract the archive into `~/homebrew/plugins/OmniAchievements` on your handheld.
+3. Restart Decky: `sudo systemctl restart plugin_loader.service`.
+4. Open the Quick Access Menu in game to link non-Steam titles and track achievements on your Legion Go!
+5. **Future Updates**: Update directly from Decky with 1 click using the built-in **Plugin Self-Updater**!
 
 📖 Read the complete [Legion Go & Steam Deck Plugin Guide](docs/DECKY_PLUGIN_GUIDE.md).
 

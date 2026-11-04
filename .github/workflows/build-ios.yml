@@ -1,4 +1,4 @@
-name: Build iOS & iPadOS IPA
+name: Build Releases (iOS IPA & Decky Plugin)
 
 on:
   push:
@@ -13,8 +13,8 @@ env:
   CI: true
 
 jobs:
-  build-ipa:
-    name: Compile iOS & iPadOS IPA
+  build-release:
+    name: Compile iOS IPA & Decky Plugin
     runs-on: macos-14
     steps:
       - name: Checkout Code
@@ -74,6 +74,16 @@ jobs:
           unzip -t OmniAchievements.ipa
           ls -lh OmniAchievements.ipa
 
+      - name: Build & Package Decky Loader Plugin
+        run: |
+          cd decky-plugin
+          npx -y esbuild src/index.tsx --bundle --format=esm --external:react --external:react-dom --external:decky-frontend-lib --external:@decky/ui --external:@decky/api --target=es2020 --outfile=dist/index.js
+          cp dist/index.js ./index.js
+          rm -f OmniAchievements-Decky.zip
+          zip -r OmniAchievements-Decky.zip plugin.json package.json main.py dist index.js README.md
+          unzip -t OmniAchievements-Decky.zip
+          ls -lh OmniAchievements-Decky.zip
+
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -83,20 +93,69 @@ jobs:
           retention-days: 30
           compression-level: 0
 
-      - name: Publish Direct IPA to GitHub Releases
+      - name: Upload Decky Plugin Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OmniAchievements-Decky-Plugin
+          path: decky-plugin/OmniAchievements-Decky.zip
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: Publish Release Packages to GitHub Releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd client/ios/App
-          TAG="latest"
+          # Determine version tag from git ref or VERSION file
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then
             TAG="${GITHUB_REF#refs/tags/}"
+            VERSION="${TAG#v}"
+          else
+            VERSION=$(cat VERSION 2>/dev/null | tr -d '[:space:]')
+            if [ -z "$VERSION" ]; then
+              VERSION="0.1.0"
+            fi
+            TAG="v$VERSION"
           fi
-          echo "Target Release Tag: $TAG"
+          echo "Target Release Version: $VERSION (Tag: $TAG)"
 
-          # Delete previous release with same tag if exists to keep rolling latest fresh
-          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          IPA_PATH="client/ios/App/OmniAchievements.ipa"
+          DECKY_PATH="decky-plugin/OmniAchievements-Decky.zip"
 
-          gh release create "$TAG" OmniAchievements.ipa \
-            --title "OmniAchievements iOS & iPadOS ($TAG)" \
-            --notes "Direct, uncompressed .ipa package ready for SideStore, AltStore, TrollStore, and Sideloadly. DO NOT uncompress this file."
+          RELEASE_TITLE="OmniAchievements v$VERSION"
+          RELEASE_NOTES="## 🎮 OmniAchievements v$VERSION
+
+### 📦 Release Downloads
+- 🍏 **\`OmniAchievements.ipa\`**: Native iOS & iPadOS application package. Ready to install with **SideStore**, **AltStore**, **TrollStore**, or **Sideloadly**. *(Do NOT uncompress this file)*
+- 🕹️ **\`OmniAchievements-Decky.zip\`**: SteamOS / Decky Loader plugin for Lenovo Legion Go & Steam Deck. Extract into \`~/homebrew/plugins/OmniAchievements\` and restart Decky. Supports 1-click in-Decky self-updating!
+
+---
+
+### 🏷️ Version Scheme (a.b.c)
+- **\`a\`**: Main architecture version (current: \`0\`)
+- **\`b\`**: Major feature updates
+- **\`c\`**: Minor improvements and bug fixes
+"
+
+          # 1. Create or update the specific versioned release (e.g. v0.1.0)
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists. Uploading updated packages..."
+            gh release upload "$TAG" "$IPA_PATH" "$DECKY_PATH" --clobber
+          else
+            echo "Creating new release $TAG..."
+            gh release create "$TAG" "$IPA_PATH" "$DECKY_PATH" \
+              --title "$RELEASE_TITLE" \
+              --notes "$RELEASE_NOTES" \
+              --latest
+          fi
+
+          # 2. Synchronize rolling 'latest' release for automated download channels
+          if [ "$TAG" != "latest" ]; then
+            if gh release view "latest" >/dev/null 2>&1; then
+              gh release upload "latest" "$IPA_PATH" "$DECKY_PATH" --clobber
+            else
+              gh release create "latest" "$IPA_PATH" "$DECKY_PATH" \
+                --title "OmniAchievements Latest" \
+                --notes "$RELEASE_NOTES"
+            fi
+          fi

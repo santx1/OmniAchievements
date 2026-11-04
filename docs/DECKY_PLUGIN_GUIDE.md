@@ -21,7 +21,18 @@ If you don't have Decky Loader installed yet:
 3. Download the installer and run it.
 4. Return to **Gaming Mode**.
 
-### Step 2: Copy the Plugin to your Handheld
+### Step 2: Download or Copy the Plugin to your Handheld
+
+#### Option A: Download Pre-Packaged Release (Recommended)
+1. Download **`OmniAchievements-Decky.zip`** from [GitHub Releases](https://github.com/santx1/OmniAchievements/releases).
+2. Extract the archive into `~/homebrew/plugins/OmniAchievements/`:
+```bash
+mkdir -p ~/homebrew/plugins/OmniAchievements
+unzip OmniAchievements-Decky.zip -d ~/homebrew/plugins/OmniAchievements/
+sudo systemctl restart plugin_loader.service
+```
+
+#### Option B: Copy from Local Repository
 You can copy the `decky-plugin` folder to your handheld via SSH, SMB network share, or USB drive:
 
 On your Legion Go / Steam Deck terminal:
