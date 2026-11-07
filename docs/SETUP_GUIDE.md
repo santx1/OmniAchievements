@@ -128,3 +128,49 @@ To backup your entire library:
 cp -r ./data /path/to/backup/
 ```
 To restore, simply place the `./data` folder back and run `docker compose up -d`.
+
+---
+
+## 🗄️ NAS Installation Guide (TrueNAS, Unraid, Synology)
+
+### 🐬 TrueNAS SCALE
+
+#### 1. Create a Dataset for Persistent Data
+1. In the TrueNAS web UI, navigate to **Datasets**.
+2. Select your storage pool (e.g., `tank`), click **Add Dataset**.
+3. Name it: `omniachievements` (path: `/mnt/tank/omniachievements`).
+4. Ensure standard read/write permissions for apps.
+
+#### 2. Install the App
+- **TrueNAS SCALE 24.10+ (Electric Eel / Docker Compose)**:
+  1. Go to **Apps** > **Discover Apps** > **Custom App** (or **Install via Docker Compose**).
+  2. Choose Docker Compose, name: `omniachievements`.
+  3. Use the Compose YAML:
+     ```yaml
+     services:
+       omniachievements:
+         container_name: omniachievements
+         image: ghcr.io/santx1/omniachievements:latest
+         restart: unless-stopped
+         ports:
+           - "3001:3001"
+         environment:
+           - NODE_ENV=production
+           - PORT=3001
+           - DATA_DIR=/app/data
+           - MASTER_PASSWORD=MySecretPassword123!
+         volumes:
+           - /mnt/tank/omniachievements:/app/data
+     ```
+  4. Click **Save** to start.
+
+- **TrueNAS SCALE 24.04 and earlier (GUI Form)**:
+  1. Go to **Apps** > **Discover Apps** > **Custom App**.
+  2. Application Name: `omniachievements`.
+  3. Image repository: `ghcr.io/santx1/omniachievements` (or Docker Hub), Tag: `latest`.
+  4. Port forwarding: Container `3001` to Host `3001` (or Web Port `30301`).
+  5. Storage: Add **Host Path Volume**, Host Path: `/mnt/tank/omniachievements`, Mount Path: `/app/data`.
+  6. Environment variables: Add `MASTER_PASSWORD` with your password.
+  7. Click **Save**.
+
+Open `http://<TRUENAS_IP>:3001` in your browser!

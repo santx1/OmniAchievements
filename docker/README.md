@@ -123,6 +123,84 @@ By mapping `-v ./data:/app/data` (or `-v $(pwd)/data:/app/data`):
 
 ---
 
+## 🗄️ NAS Deployment (TrueNAS SCALE, Unraid, Synology)
+
+### 🐬 TrueNAS SCALE
+
+#### 1. Create a Dataset for Persistent Data
+1. In the TrueNAS web UI, navigate to **Datasets**.
+2. Select your pool (e.g. `tank` or `pool1`), click **Add Dataset**.
+3. Name it `omniachievements` (path will be e.g. `/mnt/tank/omniachievements`).
+4. Ensure the dataset has read & write permissions (ACL: standard POSIX read/write).
+
+#### 2. Install the App
+
+##### Option A: TrueNAS SCALE 24.10+ (Electric Eel - Docker Compose)
+1. Go to **Apps** > **Discover Apps** > **Custom App** (or **Install via Compose**).
+2. Set the Application Name: `omniachievements`.
+3. Paste the Compose configuration:
+   ```yaml
+   services:
+     omniachievements:
+       container_name: omniachievements
+       image: ghcr.io/santx1/omniachievements:latest
+       restart: unless-stopped
+       ports:
+         - "3001:3001"
+       environment:
+         - NODE_ENV=production
+         - PORT=3001
+         - DATA_DIR=/app/data
+         - MASTER_PASSWORD=MySecretPassword123!
+         - STEAM_API_KEY=
+         - STEAMGRIDDB_API_KEY=
+         - GEMINI_API_KEY=
+         - JWT_SECRET=random_jwt_secret_phrase
+       volumes:
+         - /mnt/tank/omniachievements:/app/data
+   ```
+4. Click **Save** / **Install**.
+
+##### Option B: TrueNAS SCALE 24.04 and earlier (GUI Custom App Form)
+1. Go to **Apps** > **Discover Apps** > click **Custom App** in the top-right corner.
+2. **Application Name**: `omniachievements`.
+3. **Image Details**:
+   - Image repository: `ghcr.io/santx1/omniachievements` (or your Docker Hub image).
+   - Image tag: `latest`.
+4. **Port Configuration**:
+   - Container Port: `3001`.
+   - Node Port / Web Port: `3001` (or any available port, e.g. `3001` or `30301`).
+5. **Environment Variables**:
+   - Add `MASTER_PASSWORD` with your chosen password.
+   - (Optional) Add `STEAM_API_KEY`, `STEAMGRIDDB_API_KEY`, etc.
+6. **Storage / Volume Mount**:
+   - Type: **Host Path**.
+   - Host Path: `/mnt/tank/omniachievements`.
+   - Mount Path: `/app/data`.
+7. Click **Save** to deploy.
+
+---
+
+### 🟠 Unraid
+1. In the Unraid WebGUI, navigate to the **Docker** tab and click **Add Container**.
+2. Set **Name**: `omniachievements`.
+3. Set **Repository**: `ghcr.io/santx1/omniachievements:latest` (or Docker Hub).
+4. Add **Port mapping**: Host `3001` -> Container `3001`.
+5. Add **Path mapping**: Host `/mnt/user/appdata/omniachievements` -> Container `/app/data`.
+6. Add **Variable**: Key `MASTER_PASSWORD` -> Value `MySecretPassword123!`.
+7. Click **Apply**.
+
+---
+
+### 📦 Synology NAS (Container Manager)
+1. Open **Container Manager** on DSM.
+2. Go to **Project** > **Create**.
+3. Name: `omniachievements`, Path: select a folder (e.g. `/docker/omniachievements`).
+4. Select **Create docker-compose.yml** and paste the Compose file from [Option 2 above](#option-2-docker-compose-recommended), replacing `./data` with your folder path.
+5. Click **Next** and **Done**.
+
+---
+
 ## 🌐 Reverse Proxy & SSL Setup
 
 ### Nginx Example
