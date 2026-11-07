@@ -14,12 +14,16 @@ jobs:
   build-and-push:
     name: Build & Push Multi-Arch Docker Image
     runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up QEMU (for multi-arch build: amd64 and arm64)
+      - name: "Set up QEMU (multi-arch build for amd64 and arm64)"
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
@@ -33,7 +37,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub (Optional if secrets are set)
-        if: "${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}"
+        if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -42,11 +46,13 @@ jobs:
       - name: Determine Target Image Registries
         id: images
         run: |
-          IMAGES="ghcr.io/${{ github.repository }}"
-          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] && [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
-            DH_REPO="${{ secrets.DOCKERHUB_REPOSITORY }}"
-            if [ -z "$DH_REPO" ]; then
-              DH_REPO="${{ secrets.DOCKERHUB_USERNAME }}/omniachievements"
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          IMAGES="ghcr.io/${REPO_LOWER}"
+          if [ -n "$DOCKERHUB_USERNAME" ] && [ -n "$DOCKERHUB_TOKEN" ]; then
+            if [ -n "$DOCKERHUB_REPOSITORY" ]; then
+              DH_REPO=$(echo "$DOCKERHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+            else
+              DH_REPO=$(echo "${DOCKERHUB_USERNAME}/omniachievements" | tr '[:upper:]' '[:lower:]')
             fi
             IMAGES="${IMAGES}
           ${DH_REPO}"
@@ -63,10 +69,10 @@ jobs:
         with:
           images: ${{ steps.images.outputs.list }}
           tags: |
-            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=ref,event=branch
+            type=semver,pattern={{major}}
             type=sha,format=short
 
       - name: Build and push Docker image
@@ -82,13 +88,13 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Sync Docker Hub Description & README
-        if: "${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}"
+        if: env.DOCKERHUB_USERNAME != '' && env.DOCKERHUB_TOKEN != ''
         uses: peter-evans/dockerhub-description@v4
         continue-on-error: true
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ secrets.DOCKERHUB_REPOSITORY != '' && secrets.DOCKERHUB_REPOSITORY || format('{0}/omniachievements', secrets.DOCKERHUB_USERNAME) }}
+          repository: ${{ env.DOCKERHUB_REPOSITORY != '' && env.DOCKERHUB_REPOSITORY || format('{0}/omniachievements', env.DOCKERHUB_USERNAME) }}
           short-description: "Self-hosted cross-platform game & achievement synchronizer for iOS, Web, and SteamOS."
           readme-filepath: ./docker/README.md
           enable-url-completion: true
