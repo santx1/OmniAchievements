@@ -15,7 +15,7 @@ env:
 jobs:
   build-release:
     name: Compile iOS IPA & Decky Plugin
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
