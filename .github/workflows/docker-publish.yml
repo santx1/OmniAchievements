@@ -44,8 +44,12 @@ jobs:
         run: |
           IMAGES="ghcr.io/${{ github.repository }}"
           if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] && [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            DH_REPO="${{ secrets.DOCKERHUB_REPOSITORY }}"
+            if [ -z "$DH_REPO" ]; then
+              DH_REPO="${{ secrets.DOCKERHUB_USERNAME }}/omniachievements"
+            fi
             IMAGES="${IMAGES}
-          ${{ secrets.DOCKERHUB_USERNAME }}/omniachievements"
+          ${DH_REPO}"
           fi
           {
             echo "list<<EOF"
@@ -76,3 +80,15 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Sync Docker Hub Description & README
+        if: "${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}"
+        uses: peter-evans/dockerhub-description@v4
+        continue-on-error: true
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_REPOSITORY != '' && secrets.DOCKERHUB_REPOSITORY || format('{0}/omniachievements', secrets.DOCKERHUB_USERNAME) }}
+          short-description: "Self-hosted cross-platform game & achievement synchronizer for iOS, Web, and SteamOS."
+          readme-filepath: ./docker/README.md
+          enable-url-completion: true
