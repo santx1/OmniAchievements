@@ -132,8 +132,10 @@ omniachievements/
 
 ## 🚀 Quickstart: Self-Hosting with Docker
 
-### Option 1: Instant Run with Pre-Built Docker Image (Recommended)
-You don't even need to clone the repository to run OmniAchievements. Run this single command:
+OmniAchievements is published as a pre-built, multi-architecture Docker container (**`linux/amd64`** and **`linux/arm64`**) ready to deploy on x86 servers, NAS devices (Synology, Unraid, TrueNAS, QNAP), Raspberry Pi 4/5, Apple Silicon, and cloud VPS.
+
+### Method 1: Instant 1-Line Run (Pre-Built Image)
+Run this single command in your terminal to start OmniAchievements immediately without downloading source code:
 ```bash
 docker run -d \
   --name omniachievements \
@@ -144,21 +146,57 @@ docker run -d \
   ghcr.io/santx1/omniachievements:latest
 ```
 
-### Option 2: Docker Compose
+### Method 2: Docker Compose (Recommended)
+Create a `docker-compose.yml` file anywhere on your system:
+
+```yaml
+version: '3.8'
+
+services:
+  omniachievements:
+    container_name: omniachievements
+    image: ghcr.io/santx1/omniachievements:latest
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATA_DIR=/app/data
+      - MASTER_PASSWORD=MySecretPassword123!   # Web gate password (change this!)
+      - STEAM_API_KEY=                        # (Optional) https://steamcommunity.com/dev/apikey
+      - STEAMGRIDDB_API_KEY=                  # (Optional) https://www.steamgriddb.com/profile/preferences/api
+      - GEMINI_API_KEY=                       # (Optional) For AI Achievement Generator
+      - JWT_SECRET=change_to_a_random_string  # Secret for session tokens
+    volumes:
+      - ./data:/app/data
+```
+
+Start the container in the background:
 ```bash
-# 1. Clone the repository
-git clone https://github.com/santx1/OmniAchievements.git
-cd OmniAchievements
-
-# 2. Configure Environment
-cp .env.example .env
-nano .env
-
-# 3. Pull image and start
 docker compose up -d
 ```
 The server will be available at:
 👉 **`http://localhost:3001`** (or your server's local network IP).
+
+### ⚙️ Environment Variables Reference
+| Variable | Description | Default / Example | Required? |
+|---|---|---|---|
+| `MASTER_PASSWORD` | Security gate password. Blocks unauthorized visitors before any profile or data is shown. | `changeme123` | **Yes (Change it!)** |
+| `PORT` | Internal HTTP listening port. | `3001` | No |
+| `DATA_DIR` | Internal directory where the SQLite database and settings are saved. | `/app/data` | No |
+| `STEAM_API_KEY` | Valve API key to sync Steam games, playtime, and official achievements. | Free at [Steam Dev](https://steamcommunity.com/dev/apikey) | Optional |
+| `STEAMGRIDDB_API_KEY` | Key to search and choose official vertical covers & hero banners. | Free at [SteamGridDB](https://www.steamgriddb.com/profile/preferences/api) | Optional |
+| `GEMINI_API_KEY` | Google Gemini key to generate custom retro/indie achievements with AI. | Free at [Google AI Studio](https://aistudio.google.com/) | Optional |
+| `JWT_SECRET` | Secret key used to sign session and Decky pairing tokens. | Any random string | Recommended |
+
+### 🔄 Updating OmniAchievements
+Updating is as simple as pulling the latest container. Your data in `./data` is untouched:
+```bash
+docker compose pull
+docker compose up -d
+```
+For more advanced setups (Nginx, Traefik, Caddy, SSL, and backups), see the full [Docker Setup Guide](docs/SETUP_GUIDE.md) and [Docker Documentation](docker/README.md).
 
 ---
 
