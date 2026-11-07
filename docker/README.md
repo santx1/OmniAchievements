@@ -40,8 +40,6 @@ Open your browser at **`http://localhost:3001`** (or your server's IP address) a
 Save the following content as `docker-compose.yml` in any directory on your server:
 
 ```yaml
-version: '3.8'
-
 services:
   omniachievements:
     container_name: omniachievements

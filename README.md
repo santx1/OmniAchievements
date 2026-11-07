@@ -150,8 +150,6 @@ docker run -d \
 Create a `docker-compose.yml` file anywhere on your system:
 
 ```yaml
-version: '3.8'
-
 services:
   omniachievements:
     container_name: omniachievements
