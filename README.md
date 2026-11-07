@@ -132,21 +132,29 @@ omniachievements/
 
 ## 🚀 Quickstart: Self-Hosting with Docker
 
-### 1. Clone the repository
+### Option 1: Instant Run with Pre-Built Docker Image (Recommended)
+You don't even need to clone the repository to run OmniAchievements. Run this single command:
 ```bash
-git clone https://github.com/your-username/omniachievements.git
-cd omniachievements
+docker run -d \
+  --name omniachievements \
+  --restart unless-stopped \
+  -p 3001:3001 \
+  -v $(pwd)/data:/app/data \
+  -e MASTER_PASSWORD=MySecretPassword123! \
+  ghcr.io/santx1/omniachievements:latest
 ```
 
-### 2. Configure Environment
+### Option 2: Docker Compose
 ```bash
+# 1. Clone the repository
+git clone https://github.com/santx1/OmniAchievements.git
+cd OmniAchievements
+
+# 2. Configure Environment
 cp .env.example .env
 nano .env
-```
-Set your `MASTER_PASSWORD`, `STEAM_API_KEY`, `STEAMGRIDDB_API_KEY`, and optional `GEMINI_API_KEY` (for the AI Achievement Architect).
 
-### 3. Start the Server
-```bash
+# 3. Pull image and start
 docker compose up -d
 ```
 The server will be available at:

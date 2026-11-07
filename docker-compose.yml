@@ -3,9 +3,11 @@ version: '3.8'
 services:
   omniachievements:
     container_name: omniachievements
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
+    image: ghcr.io/santx1/omniachievements:latest
+    # To build from source locally instead of pulling from GHCR, uncomment the build section:
+    # build:
+    #   context: .
+    #   dockerfile: docker/Dockerfile
     restart: unless-stopped
     ports:
       - "${PORT:-3001}:3001"

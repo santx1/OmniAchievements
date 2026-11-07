@@ -13,24 +13,33 @@ This guide walks you through deploying **OmniAchievements** on your home server,
 
 ## ⚡ Quickstart Deployment
 
-### 1. Clone the repository
+### Method A: Single Command with Pre-Built Image
 ```bash
-git clone https://github.com/your-username/omniachievements.git
-cd omniachievements
+docker run -d \
+  --name omniachievements \
+  --restart unless-stopped \
+  -p 3001:3001 \
+  -v $(pwd)/data:/app/data \
+  -e MASTER_PASSWORD=MySecretPassword123! \
+  ghcr.io/santx1/omniachievements:latest
 ```
 
-### 2. Configure environment variables
+### Method B: Docker Compose
+#### 1. Clone the repository
+```bash
+git clone https://github.com/santx1/OmniAchievements.git
+cd OmniAchievements
+```
+
+#### 2. Configure environment variables
 Copy the example environment file:
 ```bash
 cp .env.example .env
-```
-Edit `.env` using your favorite text editor:
-```bash
 nano .env
 ```
 Set your `MASTER_PASSWORD` (e.g. `MySecretPass2026!`). This password protects the web version and blocks unauthorized visitors before any profile or data is shown.
 
-### 3. Launch the container
+#### 3. Launch the container
 ```bash
 docker compose up -d
 ```
