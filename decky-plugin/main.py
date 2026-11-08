@@ -129,18 +129,6 @@ class Plugin:
             "has_token": bool(self.token)
         }
 
-    async def get_clipboard(self, *args, **kwargs):
-        """Read text from clipboard using wl-paste (Wayland) or xclip (X11)."""
-        import subprocess
-        for cmd in [["wl-paste", "--no-newline"], ["wl-paste"], ["xclip", "-selection", "clipboard", "-o"]]:
-            try:
-                res = subprocess.run(cmd, capture_output=True, text=True, timeout=1)
-                if res.returncode == 0 and res.stdout and res.stdout.strip():
-                    return {"text": res.stdout.strip()}
-            except Exception:
-                continue
-        return {"text": ""}
-
     async def check_connection(self, *args, **kwargs):
         if not self.server_url:
             return {
@@ -409,6 +397,60 @@ class Plugin:
 
         return result
 
+    def _safe_write(self, target_path, content):
+        """Write content (str or bytes) safely, handling SteamOS ownership and permission issues."""
+        import subprocess
+        content_bytes = content.encode("utf-8") if isinstance(content, str) else content
+
+        dir_path = os.path.dirname(target_path)
+        try:
+            os.makedirs(dir_path, exist_ok=True)
+        except PermissionError:
+            try:
+                subprocess.run(["sudo", "-n", "mkdir", "-p", dir_path], capture_output=True, timeout=3)
+                subprocess.run(["sudo", "-n", "chmod", "777", dir_path], capture_output=True, timeout=3)
+            except Exception:
+                pass
+
+        # 1. Try standard user write
+        try:
+            tmp_path = target_path + ".new"
+            with open(tmp_path, "wb") as f:
+                f.write(content_bytes)
+            try:
+                if os.path.exists(target_path):
+                    os.chmod(target_path, 0o666)
+            except Exception:
+                pass
+            os.replace(tmp_path, target_path)
+            return
+        except PermissionError:
+            pass
+
+        # 2. Fix directory ownership/permissions with sudo -n if installed as root
+        try:
+            subprocess.run(["sudo", "-n", "chown", "-R", f"{os.getuid()}:{os.getgid()}", PLUGIN_DIR], capture_output=True, timeout=3)
+            subprocess.run(["sudo", "-n", "chmod", "-R", "777", PLUGIN_DIR], capture_output=True, timeout=3)
+            tmp_path = target_path + ".new"
+            with open(tmp_path, "wb") as f:
+                f.write(content_bytes)
+            os.replace(tmp_path, target_path)
+            return
+        except Exception:
+            pass
+
+        # 3. Direct write via sudo -n tee as fallback
+        try:
+            p = subprocess.Popen(["sudo", "-n", "tee", target_path], stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            _, err = p.communicate(input=content_bytes, timeout=5)
+            if p.returncode == 0:
+                subprocess.run(["sudo", "-n", "chmod", "666", target_path], capture_output=True, timeout=3)
+                return
+        except Exception:
+            pass
+
+        raise PermissionError(f"Permission denied writing to '{target_path}'. Run on Steam Deck: sudo chown -R $(whoami) '{PLUGIN_DIR}'")
+
     async def apply_update(self, *args, **kwargs):
         source = "auto"
         if len(args) == 1 and isinstance(args[0], dict):
@@ -421,6 +463,16 @@ class Plugin:
         current_ver = self.get_local_version()
         updated_files = []
         try:
+            # Pre-emptively ensure write permissions on PLUGIN_DIR
+            try:
+                import subprocess
+                subprocess.run(["chmod", "-R", "u+rw", PLUGIN_DIR], capture_output=True, timeout=2)
+                if not os.access(PLUGIN_DIR, os.W_OK):
+                    subprocess.run(["sudo", "-n", "chown", "-R", f"{os.getuid()}:{os.getgid()}", PLUGIN_DIR], capture_output=True, timeout=3)
+                    subprocess.run(["sudo", "-n", "chmod", "-R", "777", PLUGIN_DIR], capture_output=True, timeout=3)
+            except Exception:
+                pass
+
             use_source = source
             if use_source == "auto":
                 check = await self.check_for_updates("server")
@@ -437,11 +489,7 @@ class Plugin:
                 files_dict = bundle.get("files", {})
                 for rel_path, content in files_dict.items():
                     target_path = os.path.join(PLUGIN_DIR, rel_path)
-                    os.makedirs(os.path.dirname(target_path), exist_ok=True)
-                    tmp_path = target_path + ".new"
-                    with open(tmp_path, "w", encoding="utf-8") as f:
-                        f.write(content)
-                    os.replace(tmp_path, target_path)
+                    self._safe_write(target_path, content)
                     updated_files.append(rel_path)
 
             else:  # GitHub
@@ -459,14 +507,10 @@ class Plugin:
 
                 for rel_path in files_to_download:
                     target_path = os.path.join(PLUGIN_DIR, rel_path)
-                    os.makedirs(os.path.dirname(target_path), exist_ok=True)
                     req = urllib.request.Request(f"{base_gh}/{rel_path}", headers={"User-Agent": "OmniAchievements-Decky"})
                     with urllib.request.urlopen(req, timeout=12, context=ctx) as resp:
                         content = resp.read()
-                        tmp_path = target_path + ".new"
-                        with open(tmp_path, "wb") as f:
-                            f.write(content)
-                        os.replace(tmp_path, target_path)
+                        self._safe_write(target_path, content)
                         updated_files.append(rel_path)
 
             new_ver = self.get_local_version()

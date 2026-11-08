@@ -282,36 +282,6 @@ const Content = ({ serverApi }) => {
             }
         }
     };
-    const handlePasteToken = async () => {
-        let clip = "";
-        try {
-            if (navigator?.clipboard?.readText) {
-                clip = await navigator.clipboard.readText();
-            }
-        }
-        catch { }
-        if (!clip || !clip.trim()) {
-            try {
-                const res = await callBackend("get_clipboard");
-                if (res && res.text) {
-                    clip = res.text;
-                }
-            }
-            catch { }
-        }
-        if (clip && clip.trim()) {
-            const clean = clip.trim();
-            setToken(clean);
-            try {
-                localStorage.setItem("omni_decky_token", clean);
-            }
-            catch { }
-            showToast("OmniAchievements", "Token pasted from clipboard!");
-        }
-        else {
-            showToast("OmniAchievements", "Clipboard is empty. Copy the token first!");
-        }
-    };
     const handleSaveConfig = async () => {
         setIsLoading(true);
         setConnectionStatus({
@@ -537,7 +507,7 @@ const Content = ({ serverApi }) => {
                                     localStorage.setItem("omni_decky_token", e.target.value);
                                 }
                                 catch { }
-                            } }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handlePasteToken, children: "\uD83D\uDCCB Paste Token from Clipboard" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { fontSize: "10px", color: "#888", width: "100%", padding: "0 2px" }, children: ["\uD83D\uDCA1 ", SP_JSX.jsxs("em", { children: ["Get your Pairing Token in OmniAchievements Web/iOS App: ", SP_JSX.jsx("strong", { children: "Settings > Legion Go / Decky" })] })] }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleSaveConfig, disabled: isLoading, children: isLoading ? "Connecting to server..." : connectionStatus.authenticated ? "Reconnect / Test Connection" : "Connect Server" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { padding: "8px 0", width: "100%" }, children: [SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }, children: [SP_JSX.jsx("span", { style: { fontSize: "11px", color: "#888" }, children: "Detected Running Game:" }), SP_JSX.jsx("span", { style: { fontSize: "11px", color: activeShortcutId ? "#34d399" : "#888", fontWeight: "bold" }, children: activeShortcutId ? "🎮 Active" : "⏸ Idle" })] }), SP_JSX.jsx("div", { style: { fontSize: "14px", fontWeight: "bold", wordBreak: "break-word" }, children: activeShortcutName || "No game running currently" }), activeShortcutId && (SP_JSX.jsxs("div", { style: { fontSize: "11px", color: "#666", marginTop: "2px" }, children: ["AppID: ", activeShortcutId] })), SP_JSX.jsx("div", { style: { marginTop: "8px" }, children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => detectRunningGame(true), children: "\uD83D\uDD04 Refresh Game Detection" }) })] }) }), !linkedGame && suggestedMatch && activeShortcutId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { width: "100%", padding: "10px", borderRadius: "8px", background: "rgba(99, 102, 241, 0.2)", border: "1px solid rgba(99, 102, 241, 0.5)" }, children: [SP_JSX.jsx("div", { style: { fontSize: "11px", color: "#a5b4fc", fontWeight: "bold" }, children: "Suggested Match Found:" }), SP_JSX.jsxs("div", { style: { fontSize: "13px", fontWeight: "bold", margin: "4px 0" }, children: [suggestedMatch.title, " (", suggestedMatch.platform, ")"] }), SP_JSX.jsxs(DFL.ButtonItem, { layout: "below", onClick: async () => {
+                            } }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { fontSize: "10px", color: "#888", width: "100%", padding: "0 2px" }, children: ["\uD83D\uDCA1 ", SP_JSX.jsxs("em", { children: ["Get your Pairing Token in OmniAchievements Web/iOS App: ", SP_JSX.jsx("strong", { children: "Settings > Legion Go / Decky" })] })] }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleSaveConfig, disabled: isLoading, children: isLoading ? "Connecting to server..." : connectionStatus.authenticated ? "Reconnect / Test Connection" : "Connect Server" }) }), SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { padding: "8px 0", width: "100%" }, children: [SP_JSX.jsxs("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }, children: [SP_JSX.jsx("span", { style: { fontSize: "11px", color: "#888" }, children: "Detected Running Game:" }), SP_JSX.jsx("span", { style: { fontSize: "11px", color: activeShortcutId ? "#34d399" : "#888", fontWeight: "bold" }, children: activeShortcutId ? "🎮 Active" : "⏸ Idle" })] }), SP_JSX.jsx("div", { style: { fontSize: "14px", fontWeight: "bold", wordBreak: "break-word" }, children: activeShortcutName || "No game running currently" }), activeShortcutId && (SP_JSX.jsxs("div", { style: { fontSize: "11px", color: "#666", marginTop: "2px" }, children: ["AppID: ", activeShortcutId] })), SP_JSX.jsx("div", { style: { marginTop: "8px" }, children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: () => detectRunningGame(true), children: "\uD83D\uDD04 Refresh Game Detection" }) })] }) }), !linkedGame && suggestedMatch && activeShortcutId && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsxs("div", { style: { width: "100%", padding: "10px", borderRadius: "8px", background: "rgba(99, 102, 241, 0.2)", border: "1px solid rgba(99, 102, 241, 0.5)" }, children: [SP_JSX.jsx("div", { style: { fontSize: "11px", color: "#a5b4fc", fontWeight: "bold" }, children: "Suggested Match Found:" }), SP_JSX.jsxs("div", { style: { fontSize: "13px", fontWeight: "bold", margin: "4px 0" }, children: [suggestedMatch.title, " (", suggestedMatch.platform, ")"] }), SP_JSX.jsxs(DFL.ButtonItem, { layout: "below", onClick: async () => {
                                         setIsLoading(true);
                                         await callBackend("link_shortcut", {
                                             steam_shortcut_id: activeShortcutId,

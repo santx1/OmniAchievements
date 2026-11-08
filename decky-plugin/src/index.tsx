@@ -348,33 +348,6 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
     }
   };
 
-  const handlePasteToken = async () => {
-    let clip = "";
-    try {
-      if (navigator?.clipboard?.readText) {
-        clip = await navigator.clipboard.readText();
-      }
-    } catch {}
-
-    if (!clip || !clip.trim()) {
-      try {
-        const res: any = await callBackend("get_clipboard");
-        if (res && res.text) {
-          clip = res.text;
-        }
-      } catch {}
-    }
-
-    if (clip && clip.trim()) {
-      const clean = clip.trim();
-      setToken(clean);
-      try { localStorage.setItem("omni_decky_token", clean); } catch {}
-      showToast("OmniAchievements", "Token pasted from clipboard!");
-    } else {
-      showToast("OmniAchievements", "Clipboard is empty. Copy the token first!");
-    }
-  };
-
   const handleSaveConfig = async () => {
     setIsLoading(true);
     setConnectionStatus({
@@ -627,15 +600,6 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
               try { localStorage.setItem("omni_decky_token", e.target.value); } catch {}
             }}
           />
-        </PanelSectionRow>
-
-        <PanelSectionRow>
-          <ButtonItem
-            layout="below"
-            onClick={handlePasteToken}
-          >
-            📋 Paste Token from Clipboard
-          </ButtonItem>
         </PanelSectionRow>
 
         <PanelSectionRow>
