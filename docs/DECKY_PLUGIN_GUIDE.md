@@ -55,7 +55,7 @@ sudo systemctl restart plugin_loader.service
 In the OmniAchievements Web App, go to **Settings > Legion Go / Decky**, click **Generate Token**, and click **"Copy 1-Line Command"**.
 Paste that single command into **Konsole** (or via SSH) on your handheld:
 ```bash
-mkdir -p ~/.config && echo '{"server_url":"http://192.168.1.XXX:3001","token":"YOUR_TOKEN_HERE"}' > ~/.config/omni_achievements_decky.json
+mkdir -p ~/homebrew/settings/OmniAchievements ~/.config && echo '{"server_url":"http://192.168.1.XXX:3001","token":"YOUR_TOKEN_HERE"}' | tee ~/homebrew/settings/OmniAchievements/config.json ~/.config/omni_achievements_decky.json >/dev/null && sudo systemctl restart plugin_loader.service
 ```
 Restart Decky or open the menu, and it will be immediately connected!
 

@@ -48,16 +48,34 @@ class Plugin:
         self.load_config()
 
     def load_config(self):
-        config_path = get_config_path()
-        if os.path.exists(config_path):
-            try:
-                with open(config_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    self.server_url = data.get("server_url", self.server_url)
-                    self.token = data.get("token", self.token)
-                    print(f"[OmniAchievements] Loaded config from {config_path} (has_token: {bool(self.token)})")
-            except Exception as e:
-                print(f"[OmniAchievements] Failed to load config from {config_path}: {e}")
+        user_home = "/home/deck" if os.path.isdir("/home/deck") else (os.environ.get("DECKY_USER_HOME") or os.environ.get("HOME") or os.path.expanduser("~"))
+        settings_dir = os.environ.get("DECKY_PLUGIN_SETTINGS_DIR")
+
+        paths_to_check = []
+        if settings_dir:
+            paths_to_check.append(os.path.join(settings_dir, "config.json"))
+        paths_to_check.extend([
+            os.path.join(user_home, "homebrew", "settings", "OmniAchievements", "config.json"),
+            os.path.join(user_home, ".config", "omni_achievements_decky.json"),
+            os.path.join(user_home, ".config", "omni_achievements", "config.json"),
+            os.path.expanduser("~/.config/omni_achievements_decky.json")
+        ])
+
+        for p in paths_to_check:
+            if os.path.exists(p):
+                try:
+                    with open(p, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                        server_url = data.get("server_url")
+                        token = data.get("token")
+                        if server_url:
+                            self.server_url = str(server_url).strip()
+                        if token and str(token).strip():
+                            self.token = str(token).strip()
+                            print(f"[OmniAchievements] Loaded config from {p} (token length: {len(self.token)})")
+                            break
+                except Exception as e:
+                    print(f"[OmniAchievements] Failed reading config from {p}: {e}")
 
     def save_config(self):
         config_path = get_config_path()
@@ -123,6 +141,7 @@ class Plugin:
         return await self.check_connection()
 
     async def get_config(self, *args, **kwargs):
+        self.load_config()
         return {
             "server_url": self.server_url,
             "token": self.token,
