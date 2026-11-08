@@ -28,7 +28,8 @@ import {
   CloudUpload,
   HardDrive,
   RefreshCw,
-  Globe
+  Globe,
+  Terminal
 } from 'lucide-react';
 import { NEUTRAL_AVATARS, getAvatarUrl, DEFAULT_AVATAR } from '../../utils/avatars.js';
 import { useSyncStatus } from '../../utils/syncEngine.js';
@@ -98,6 +99,7 @@ export const SettingsView: React.FC = () => {
   const [pairingToken, setPairingToken] = useState<string | null>(null);
   const [isGeneratingPairToken, setIsGeneratingPairToken] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
+  const [copiedCmd, setCopiedCmd] = useState(false);
 
   // Cloud Sync & Offline Storage
   const { syncState, isOnline, pendingCount, lastSyncTime, triggerSync } = useSyncStatus();
@@ -1132,6 +1134,37 @@ export const SettingsView: React.FC = () => {
               </button>
             )}
           </div>
+
+          {pairingToken && (
+            <div className="mt-3 p-3 rounded-2xl bg-slate-900/80 border border-cyan-500/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+                  ⚡ Quick SteamOS Setup (SSH or Konsole Terminal):
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const serverOrigin = window.location.origin.replace(/^http:\/\/localhost/, 'http://' + window.location.hostname);
+                    const cmd = `mkdir -p ~/.config && echo '{"server_url":"${serverOrigin}","token":"${pairingToken}"}' > ~/.config/omni_achievements_decky.json`;
+                    navigator.clipboard.writeText(cmd);
+                    setCopiedCmd(true);
+                    setTimeout(() => setCopiedCmd(false), 2000);
+                  }}
+                  className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium flex items-center gap-1 transition-colors"
+                >
+                  {copiedCmd ? <CheckCheck className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedCmd ? "Copied 1-Line Command!" : "Copy 1-Line Command"}</span>
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-400">
+                Run this single command on your Steam Deck / Legion Go to configure the Decky plugin instantly without typing:
+              </p>
+              <code className="text-[10px] font-mono text-cyan-200 block break-all bg-black/50 p-2 rounded-xl select-all border border-slate-800">
+                mkdir -p ~/.config &amp;&amp; echo '{JSON.stringify({ server_url: window.location.origin, token: pairingToken })}' &gt; ~/.config/omni_achievements_decky.json
+              </code>
+            </div>
+          )}
         </div>
       </div>
 

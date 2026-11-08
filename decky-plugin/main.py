@@ -129,6 +129,18 @@ class Plugin:
             "has_token": bool(self.token)
         }
 
+    async def get_clipboard(self, *args, **kwargs):
+        """Read text from clipboard using wl-paste (Wayland) or xclip (X11)."""
+        import subprocess
+        for cmd in [["wl-paste", "--no-newline"], ["wl-paste"], ["xclip", "-selection", "clipboard", "-o"]]:
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=1)
+                if res.returncode == 0 and res.stdout and res.stdout.strip():
+                    return {"text": res.stdout.strip()}
+            except Exception:
+                continue
+        return {"text": ""}
+
     async def check_connection(self, *args, **kwargs):
         if not self.server_url:
             return {
