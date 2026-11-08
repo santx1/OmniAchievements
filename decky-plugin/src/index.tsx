@@ -6,9 +6,12 @@ import {
   ProgressBar,
   Focusable,
   staticClasses,
-  Router
+  Router,
+  showModal,
+  ModalRoot
 } from "@decky/ui";
-import React, { FC, useState, useEffect } from "react";
+import React, { FC, useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 
 // Self-contained icons for SteamOS Decky Loader (no external npm dependencies required)
 const TrophyIcon = ({ color = "#f59e0b", size = 16 }: { color?: string; size?: number }) => (
@@ -141,7 +144,7 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Self-Updater state
-  const [currentVersion, setCurrentVersion] = useState("0.2.5");
+  const [currentVersion, setCurrentVersion] = useState("0.3.0");
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateSource, setUpdateSource] = useState<"auto" | "server" | "github">("auto");
@@ -883,6 +886,881 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
   );
 };
 
+// ============================================================================
+// STEAM-NATIVE "YOUR STUFF" ACHIEVEMENTS INJECTION ENGINE
+// ============================================================================
+
+function injectNativeStyles() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById("omni-achievements-native-styles")) return;
+
+  const styleEl = document.createElement("style");
+  styleEl.id = "omni-achievements-native-styles";
+  styleEl.textContent = `
+    .omni-your-stuff-section {
+      margin: 14px 0 24px 0;
+      width: 100%;
+      box-sizing: border-box;
+      font-family: var(--gp-body-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+      animation: omniFadeIn 0.25s ease-out;
+    }
+    @keyframes omniFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .omni-section-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: #8b929a;
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+    .omni-heading-progress {
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+    .omni-achievements-card {
+      background: rgba(30, 36, 44, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 16px 18px;
+      cursor: pointer;
+      transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
+      outline: none;
+      user-select: none;
+      box-sizing: border-box;
+      display: block;
+      width: 100%;
+      color: #ffffff;
+      text-decoration: none;
+      position: relative;
+    }
+    .omni-achievements-card:focus,
+    .omni-achievements-card:focus-visible,
+    .omni-achievements-card:hover,
+    .omni-achievements-card.gpfocus {
+      border-color: #1a9fff !important;
+      background: rgba(45, 55, 68, 0.9) !important;
+      box-shadow: 0 0 0 2px #1a9fff, 0 4px 20px rgba(26, 159, 255, 0.45) !important;
+      transform: scale(1.008);
+    }
+    .omni-card-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .omni-card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .omni-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .omni-card-pct-badge {
+      font-size: 12px;
+      font-weight: 700;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.15);
+      padding: 2px 8px;
+      border-radius: 9999px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .omni-progress-track {
+      width: 100%;
+      height: 7px;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 10px 0 14px 0;
+    }
+    .omni-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+    .omni-card-bottom-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .omni-badge-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    .omni-badge-item {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+    .omni-badge-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .omni-badge-thumb.locked {
+      filter: grayscale(100%) opacity(0.35);
+    }
+    .omni-badge-lock-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.4);
+    }
+    .omni-card-action {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .omni-achievements-card:focus .omni-card-action,
+    .omni-achievements-card:hover .omni-card-action {
+      color: #38bdf8;
+    }
+    .omni-controller-glyph {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #1a9fff;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Full Achievements Modal View */
+    .omni-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: rgba(10, 14, 20, 0.92);
+      backdrop-filter: blur(24px);
+      display: flex;
+      flex-direction: column;
+      padding: 32px 48px;
+      box-sizing: border-box;
+      font-family: var(--gp-body-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+      color: #ffffff;
+      overflow: hidden;
+    }
+    .omni-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 16px;
+    }
+    .omni-modal-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+    .omni-modal-subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    .omni-modal-filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .omni-filter-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.05);
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      outline: none;
+    }
+    .omni-filter-btn:focus,
+    .omni-filter-btn.active {
+      background: #1a9fff !important;
+      border-color: #1a9fff !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 12px rgba(26, 159, 255, 0.5);
+    }
+    .omni-modal-list {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+      margin-bottom: 16px;
+    }
+    .omni-achievement-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      margin-bottom: 8px;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      outline: none;
+    }
+    .omni-achievement-row:focus,
+    .omni-achievement-row:hover,
+    .omni-achievement-row.gpfocus {
+      background: rgba(45, 55, 68, 0.85) !important;
+      border-color: #1a9fff !important;
+      box-shadow: 0 0 0 2px #1a9fff, 0 4px 16px rgba(26, 159, 255, 0.35) !important;
+      transform: scale(1.005);
+    }
+    .omni-row-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      flex-shrink: 0;
+    }
+    .omni-row-icon.locked {
+      filter: grayscale(100%) opacity(0.35);
+    }
+    .omni-row-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .omni-row-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+    .omni-row-desc {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    .omni-row-status {
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .omni-row-status.unlocked {
+      color: #10b981;
+    }
+    .omni-row-status.locked {
+      color: #64748b;
+    }
+    .omni-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .omni-close-btn {
+      padding: 8px 18px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      outline: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .omni-close-btn:focus,
+    .omni-close-btn:hover {
+      background: #ef4444;
+      border-color: #ef4444;
+    }
+  `;
+  document.head.appendChild(styleEl);
+}
+
+function findYourStuffContainer(): { container: HTMLElement; insertBefore: HTMLElement | null } | null {
+  if (typeof window === "undefined" || !window.location.href.includes("/library/app/")) {
+    return null;
+  }
+
+  // 1. Locate tabs to confirm if "Your Stuff" is currently the active tab
+  const tabs = Array.from(document.querySelectorAll<HTMLElement>('[role="tab"], button[class*="Tab"]'));
+  if (tabs.length > 0) {
+    const activeTab = tabs.find(t =>
+      t.getAttribute("aria-selected") === "true" ||
+      t.classList.contains("active") ||
+      t.className.includes("Active") ||
+      t.className.includes("Selected")
+    );
+
+    if (activeTab) {
+      const text = activeTab.textContent?.toLowerCase() || "";
+      const isYourStuff =
+        text.includes("your stuff") ||
+        text.includes("tus cosas") ||
+        text.includes("stuff") ||
+        text.includes("cosas") ||
+        text.includes("affaires") ||
+        text.includes("sachen") ||
+        tabs.indexOf(activeTab) === 1; // Tab at index 1 is standard "Your Stuff"
+
+      if (!isYourStuff) {
+        return null;
+      }
+    }
+  }
+
+  // 2. Locate the active tabpanel container
+  const tabPanel = document.querySelector<HTMLElement>('[role="tabpanel"]');
+  if (tabPanel) {
+    const playtime = tabPanel.querySelector<HTMLElement>('[class*="playtime"], [class*="Playtime"], [class*="PlayTime"]');
+    if (playtime) {
+      return { container: tabPanel, insertBefore: playtime.nextElementSibling as HTMLElement | null };
+    }
+    const screenshots = tabPanel.querySelector<HTMLElement>('[class*="screenshot"], [class*="Screenshot"], [class*="media"], [class*="Media"]');
+    if (screenshots) {
+      return { container: tabPanel, insertBefore: screenshots };
+    }
+    return { container: tabPanel, insertBefore: null };
+  }
+
+  // 3. Fallback: Search by class name matching yourstuff
+  const yourStuffByClass = document.querySelector<HTMLElement>('[class*="appdetailsyourstuff"], [class*="AppDetailsYourStuff"], [class*="yourstuff"], [class*="YourStuff"]');
+  if (yourStuffByClass) {
+    const playtime = yourStuffByClass.querySelector<HTMLElement>('[class*="playtime"], [class*="Playtime"]');
+    return { container: yourStuffByClass, insertBefore: playtime ? (playtime.nextElementSibling as HTMLElement | null) : null };
+  }
+
+  // 4. Fallback: Find playtime element's parent container
+  const allPlaytime = document.querySelector<HTMLElement>('[class*="playtime"], [class*="Playtime"], [class*="PlayTime"]');
+  if (allPlaytime && allPlaytime.parentElement) {
+    return { container: allPlaytime.parentElement, insertBefore: allPlaytime.nextElementSibling as HTMLElement | null };
+  }
+
+  return null;
+}
+
+const AchievementsBrowserModal: FC<{
+  gameTitle: string;
+  achievements: Achievement[];
+  onClose: () => void;
+}> = ({ gameTitle, achievements, onClose }) => {
+  const isSpanish = (typeof navigator !== "undefined" && navigator.language?.startsWith("es")) || false;
+  const [filter, setFilter] = useState<"all" | "unlocked" | "locked">("all");
+
+  const unlockedCount = achievements.filter(a => a.is_unlocked === 1).length;
+  const totalCount = achievements.length;
+  const progressPct = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
+
+  const filtered = achievements.filter(a => {
+    if (filter === "unlocked") return a.is_unlocked === 1;
+    if (filter === "locked") return a.is_unlocked !== 1;
+    return true;
+  });
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" || e.key === "GamepadB" || e.code === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="omni-modal-overlay">
+      <div className="omni-modal-header">
+        <div>
+          <div className="omni-modal-title">
+            🏆 {gameTitle} {isSpanish ? "- Logros" : "- Achievements"}
+          </div>
+          <div className="omni-modal-subtitle">
+            {isSpanish
+              ? `${unlockedCount} de ${totalCount} logros desbloqueados (${progressPct}%)`
+              : `${unlockedCount} of ${totalCount} achievements unlocked (${progressPct}%)`}
+          </div>
+        </div>
+        <button className="omni-close-btn Focusable" tabIndex={0} onClick={onClose}>
+          <span className="omni-controller-glyph" style={{ background: "#ef4444" }}>B</span>
+          {isSpanish ? "Cerrar" : "Close"}
+        </button>
+      </div>
+
+      <div className="omni-progress-track" style={{ height: "9px", marginBottom: "16px" }}>
+        <div className="omni-progress-fill" style={{ width: `${progressPct}%` }} />
+      </div>
+
+      <div className="omni-modal-filter-bar">
+        <button
+          className={`omni-filter-btn Focusable ${filter === "all" ? "active" : ""}`}
+          tabIndex={0}
+          onClick={() => setFilter("all")}
+        >
+          {isSpanish ? "Todos" : "All"} ({totalCount})
+        </button>
+        <button
+          className={`omni-filter-btn Focusable ${filter === "unlocked" ? "active" : ""}`}
+          tabIndex={0}
+          onClick={() => setFilter("unlocked")}
+        >
+          {isSpanish ? "Desbloqueados" : "Unlocked"} ({unlockedCount})
+        </button>
+        <button
+          className={`omni-filter-btn Focusable ${filter === "locked" ? "active" : ""}`}
+          tabIndex={0}
+          onClick={() => setFilter("locked")}
+        >
+          {isSpanish ? "Bloqueados" : "Locked"} ({totalCount - unlockedCount})
+        </button>
+      </div>
+
+      <div className="omni-modal-list">
+        {filtered.map(ach => {
+          const isUnlocked = ach.is_unlocked === 1;
+          const name = (isSpanish && ach.display_name_es) ? ach.display_name_es : ach.display_name;
+          const desc = (isSpanish && ach.description_es) ? ach.description_es : ach.description;
+          const icon = isUnlocked
+            ? (ach.icon_unlocked || ach.icon_locked)
+            : (ach.icon_locked || ach.icon_unlocked);
+
+          return (
+            <div
+              key={ach.id}
+              className="omni-achievement-row Focusable"
+              tabIndex={0}
+            >
+              <img
+                src={icon}
+                className={`omni-row-icon ${isUnlocked ? "unlocked" : "locked"}`}
+                alt={name}
+              />
+              <div className="omni-row-content">
+                <div className="omni-row-name">{name}</div>
+                <div className="omni-row-desc">{desc}</div>
+                <div className={`omni-row-status ${isUnlocked ? "unlocked" : "locked"}`}>
+                  {isUnlocked
+                    ? (isSpanish ? "✓ Desbloqueado" : "✓ Unlocked")
+                    : (isSpanish ? "🔒 Bloqueado" : "🔒 Locked")}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="omni-modal-footer">
+        <div style={{ fontSize: "12px", color: "#64748b" }}>
+          🎮 {isSpanish ? "Cruceta / Stick para navegar • (B) para salir" : "D-pad or stick to browse • (B) to exit"}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const openFullAchievementsModal = (gameTitle: string, achievements: Achievement[]) => {
+  injectNativeStyles();
+
+  // 1. Try using showModal from @decky/ui
+  try {
+    if (typeof showModal === "function") {
+      let modalRes: any = null;
+      modalRes = showModal(
+        <AchievementsBrowserModal
+          gameTitle={gameTitle}
+          achievements={achievements}
+          onClose={() => {
+            if (modalRes?.Close) modalRes.Close();
+          }}
+        />,
+        window
+      );
+      if (modalRes) return;
+    }
+  } catch (e) {
+    console.warn("[OmniAchievements] showModal error, falling back to overlay root:", e);
+  }
+
+  // 2. Direct DOM overlay root fallback
+  let container = document.getElementById("omni-achievements-modal-root");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "omni-achievements-modal-root";
+    document.body.appendChild(container);
+  }
+
+  const handleClose = () => {
+    if (container && container.parentNode) {
+      container.parentNode.removeChild(container);
+    }
+  };
+
+  const reactDOM = (window as any).SP_REACTDOM || (window as any).ReactDOM;
+  if (reactDOM?.createRoot) {
+    const root = reactDOM.createRoot(container);
+    root.render(
+      <AchievementsBrowserModal
+        gameTitle={gameTitle}
+        achievements={achievements}
+        onClose={() => {
+          handleClose();
+          root.unmount();
+        }}
+      />
+    );
+  } else if (reactDOM?.render) {
+    reactDOM.render(
+      <AchievementsBrowserModal
+        gameTitle={gameTitle}
+        achievements={achievements}
+        onClose={handleClose}
+      />,
+      container
+    );
+  }
+};
+
+const NativeSteamAchievementsSection: FC<{
+  gameTitle: string;
+  achievements: Achievement[];
+  shortcutId: string;
+  targetInfo?: { container: HTMLElement; insertBefore: HTMLElement | null };
+}> = ({ gameTitle, achievements, targetInfo }) => {
+  const isSpanish = (typeof navigator !== "undefined" && navigator.language?.startsWith("es")) || false;
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  const unlockedCount = achievements.filter(a => a.is_unlocked === 1).length;
+  const totalCount = achievements.length;
+  const progressPct = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
+
+  const unlocked = achievements.filter(a => a.is_unlocked === 1);
+  const locked = achievements.filter(a => a.is_unlocked !== 1);
+  const recentBadges = [...unlocked, ...locked].slice(0, 5);
+
+  useEffect(() => {
+    if (sectionRef.current && targetInfo?.container && targetInfo?.insertBefore) {
+      if (sectionRef.current.nextElementSibling !== targetInfo.insertBefore) {
+        targetInfo.container.insertBefore(sectionRef.current, targetInfo.insertBefore);
+      }
+    }
+  }, [targetInfo]);
+
+  const handleClick = () => {
+    openFullAchievementsModal(gameTitle, achievements);
+  };
+
+  return (
+    <div
+      ref={sectionRef}
+      className="omni-your-stuff-section"
+      id="omniachievements-your-stuff-section"
+    >
+      <div className="omni-section-heading">
+        <span>{isSpanish ? "LOGROS" : "ACHIEVEMENTS"}</span>
+        <span className="omni-heading-progress">
+          {unlockedCount} / {totalCount} ({progressPct}%)
+        </span>
+      </div>
+
+      <div
+        className="omni-achievements-card Focusable"
+        tabIndex={0}
+        role="button"
+        aria-label={`${gameTitle} Achievements: ${unlockedCount} of ${totalCount} unlocked. Press A to view all.`}
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " " || e.key === "GamepadA") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+      >
+        <div className="omni-card-top-row">
+          <div className="omni-card-title-group">
+            <TrophyIcon size={18} color="#f59e0b" />
+            <span className="omni-card-title">
+              {isSpanish ? "Progreso de Logros" : "Achievements Progress"}
+            </span>
+          </div>
+          <div className="omni-card-pct-badge">
+            {progressPct}%
+          </div>
+        </div>
+
+        <div className="omni-progress-track">
+          <div className="omni-progress-fill" style={{ width: `${progressPct}%` }} />
+        </div>
+
+        <div className="omni-card-bottom-row">
+          <div className="omni-badge-strip">
+            {recentBadges.map(ach => (
+              <div key={ach.id} className="omni-badge-item" title={ach.display_name}>
+                <img
+                  src={ach.is_unlocked === 1 ? (ach.icon_unlocked || ach.icon_locked) : (ach.icon_locked || ach.icon_unlocked)}
+                  className={`omni-badge-thumb ${ach.is_unlocked === 1 ? "unlocked" : "locked"}`}
+                  alt={ach.display_name}
+                />
+                {ach.is_unlocked !== 1 && (
+                  <div className="omni-badge-lock-overlay">
+                    <LockIcon size={12} color="#ffffff" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="omni-card-action">
+            <span className="omni-action-text">
+              {isSpanish ? "Ver todos los logros" : "View all achievements"}
+            </span>
+            <span className="omni-controller-glyph">A</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const YourStuffInjector: FC = () => {
+  const [targetInfo, setTargetInfo] = useState<{ container: HTMLElement; insertBefore: HTMLElement | null } | null>(null);
+  const [gameTitle, setGameTitle] = useState<string>("");
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const lastCheckedAppIdRef = useRef<string>("");
+  const cachedAchievementsRef = useRef<Map<string, { title: string; list: Achievement[] }>>(new Map());
+
+  useEffect(() => {
+    injectNativeStyles();
+
+    let isDestroyed = false;
+
+    const checkState = async () => {
+      if (isDestroyed) return;
+
+      const url = window.location.href || "";
+      const match = url.match(/\/library\/app\/([0-9]+)/);
+      if (!match) {
+        if (targetInfo) setTargetInfo(null);
+        return;
+      }
+
+      const appId = match[1];
+
+      // If app ID changed, fetch achievements
+      if (lastCheckedAppIdRef.current !== appId) {
+        lastCheckedAppIdRef.current = appId;
+
+        if (cachedAchievementsRef.current.has(appId)) {
+          const cached = cachedAchievementsRef.current.get(appId)!;
+          setGameTitle(cached.title);
+          setAchievements(cached.list);
+        } else {
+          let title = "";
+          try {
+            const details = (window as any).appDetailsStore?.GetAppDetails?.(Number(appId));
+            title = details?.strDisplayName || "";
+          } catch (_) {}
+
+          if (!title) {
+            const titleElem = document.querySelector<HTMLElement>('h1, [class*="HeaderTitle"], [class*="AppTitle"], [class*="game_title"]');
+            if (titleElem) title = titleElem.textContent?.trim() || "";
+          }
+
+          try {
+            const res = await callBackend("get_achievements", { shortcut_id: appId, title });
+            if (res && res.linked && Array.isArray(res.achievements) && res.achievements.length > 0) {
+              const fetchedTitle = res.game?.title || title || "Game";
+              cachedAchievementsRef.current.set(appId, { title: fetchedTitle, list: res.achievements });
+              setGameTitle(fetchedTitle);
+              setAchievements(res.achievements);
+            } else {
+              setAchievements([]);
+            }
+          } catch (_) {
+            setAchievements([]);
+          }
+        }
+      }
+
+      const found = findYourStuffContainer();
+      if (found) {
+        if (!targetInfo || targetInfo.container !== found.container || targetInfo.insertBefore !== found.insertBefore) {
+          setTargetInfo(found);
+        }
+      } else {
+        if (targetInfo) setTargetInfo(null);
+      }
+    };
+
+    checkState();
+    const interval = setInterval(checkState, 400);
+
+    return () => {
+      isDestroyed = true;
+      clearInterval(interval);
+    };
+  }, [targetInfo]);
+
+  if (!targetInfo || achievements.length === 0) return null;
+
+  return createPortal(
+    <NativeSteamAchievementsSection
+      gameTitle={gameTitle}
+      achievements={achievements}
+      shortcutId={lastCheckedAppIdRef.current}
+      targetInfo={targetInfo}
+    />,
+    targetInfo.container
+  );
+};
+
+// Standalone observer controller for maximum compatibility across all Decky versions
+let standaloneInterval: any = null;
+let standaloneRoot: any = null;
+
+function startStandaloneObserver() {
+  injectNativeStyles();
+  if (standaloneInterval) return;
+
+  let currentAppId = "";
+  let gameTitle = "";
+  let achievements: Achievement[] = [];
+  const cache = new Map<string, { title: string; list: Achievement[] }>();
+
+  standaloneInterval = setInterval(async () => {
+    const url = window.location.href || "";
+    const match = url.match(/\/library\/app\/([0-9]+)/);
+    if (!match) {
+      if (standaloneRoot) {
+        const el = document.getElementById("omniachievements-your-stuff-section");
+        if (el?.parentNode) el.parentNode.removeChild(el);
+      }
+      return;
+    }
+
+    const appId = match[1];
+    if (appId !== currentAppId) {
+      currentAppId = appId;
+      if (cache.has(appId)) {
+        const c = cache.get(appId)!;
+        gameTitle = c.title;
+        achievements = c.list;
+      } else {
+        let title = "";
+        try {
+          const details = (window as any).appDetailsStore?.GetAppDetails?.(Number(appId));
+          title = details?.strDisplayName || "";
+        } catch (_) {}
+
+        if (!title) {
+          const titleElem = document.querySelector<HTMLElement>('h1, [class*="HeaderTitle"], [class*="AppTitle"], [class*="game_title"]');
+          if (titleElem) title = titleElem.textContent?.trim() || "";
+        }
+
+        try {
+          const res = await callBackend("get_achievements", { shortcut_id: appId, title });
+          if (res && res.linked && Array.isArray(res.achievements) && res.achievements.length > 0) {
+            gameTitle = res.game?.title || title || "Game";
+            achievements = res.achievements;
+            cache.set(appId, { title: gameTitle, list: achievements });
+          } else {
+            achievements = [];
+          }
+        } catch (_) {
+          achievements = [];
+        }
+      }
+    }
+
+    if (achievements.length === 0) {
+      const existing = document.getElementById("omniachievements-your-stuff-section");
+      if (existing?.parentNode) existing.parentNode.removeChild(existing);
+      return;
+    }
+
+    const found = findYourStuffContainer();
+    if (found) {
+      const existing = document.getElementById("omniachievements-your-stuff-section");
+      if (!existing) {
+        const mountDiv = document.createElement("div");
+        if (found.insertBefore) {
+          found.container.insertBefore(mountDiv, found.insertBefore);
+        } else {
+          found.container.prepend(mountDiv);
+        }
+
+        const reactDOM = (window as any).SP_REACTDOM || (window as any).ReactDOM;
+        if (reactDOM?.createRoot) {
+          standaloneRoot = reactDOM.createRoot(mountDiv);
+          standaloneRoot.render(
+            <NativeSteamAchievementsSection
+              gameTitle={gameTitle}
+              achievements={achievements}
+              shortcutId={currentAppId}
+              targetInfo={found}
+            />
+          );
+        } else if (reactDOM?.render) {
+          reactDOM.render(
+            <NativeSteamAchievementsSection
+              gameTitle={gameTitle}
+              achievements={achievements}
+              shortcutId={currentAppId}
+              targetInfo={found}
+            />,
+            mountDiv
+          );
+        }
+      }
+    } else {
+      const existing = document.getElementById("omniachievements-your-stuff-section");
+      if (existing?.parentNode) existing.parentNode.removeChild(existing);
+    }
+  }, 450);
+}
+
+function stopStandaloneObserver() {
+  if (standaloneInterval) {
+    clearInterval(standaloneInterval);
+    standaloneInterval = null;
+  }
+  const existing = document.getElementById("omniachievements-your-stuff-section");
+  if (existing?.parentNode) existing.parentNode.removeChild(existing);
+}
+
 // Official Decky definePlugin helper
 function defineDeckyPlugin(fn: (serverApi?: any) => any) {
   return (...args: any[]) => fn(...args);
@@ -892,12 +1770,34 @@ export default defineDeckyPlugin((serverApi?: any) => {
   if (serverApi) {
     globalServerApi = serverApi;
   }
+
+  // 1. Try registering global component with routerHook
+  try {
+    const rHook = serverApi?.routerHook || (window as any).DeckyPluginLoader?.routerHook;
+    if (rHook?.addGlobalComponent) {
+      rHook.addGlobalComponent("OmniAchievementsYourStuffInjector", YourStuffInjector);
+    }
+  } catch (e) {
+    console.warn("[OmniAchievements] routerHook.addGlobalComponent not available, using standalone observer:", e);
+  }
+
+  // 2. Start standalone observer controller for guaranteed injection
+  startStandaloneObserver();
+
   return {
     name: "OmniAchievements",
     title: <div className={staticClasses.Title}>OmniAchievements</div>,
     titleView: <div className={staticClasses.Title}>OmniAchievements</div>,
     content: <Content serverApi={serverApi} />,
     icon: <TrophyIcon />,
-    onDismount() {}
+    onDismount() {
+      try {
+        const rHook = serverApi?.routerHook || (window as any).DeckyPluginLoader?.routerHook;
+        if (rHook?.removeGlobalComponent) {
+          rHook.removeGlobalComponent("OmniAchievementsYourStuffInjector");
+        }
+      } catch (_) {}
+      stopStandaloneObserver();
+    }
   };
 });

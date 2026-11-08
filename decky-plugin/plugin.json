@@ -2,7 +2,7 @@
   "name": "OmniAchievements",
   "author": "OmniSync",
   "flags": [],
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "Synchronize and display custom achievements on non-Steam games in SteamOS",
   "api_version": 2
 }

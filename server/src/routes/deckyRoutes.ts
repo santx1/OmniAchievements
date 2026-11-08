@@ -279,8 +279,9 @@ router.delete('/link/:linkId', (req: Request, res: Response) => {
 router.get('/achievements/:shortcutId', (req: Request, res: Response) => {
   const profileId = (req as any).profileId;
   const { shortcutId } = req.params;
+  const nameQuery = req.query.name || req.query.title;
 
-  // 1. Look for a linked non-Steam game
+  // 1. Look for a linked non-Steam game by shortcut ID
   let link = db.prepare(`
     SELECT dl.game_id, g.title, g.cover_image, g.total_achievements, g.unlocked_achievements
     FROM decky_links dl
@@ -297,6 +298,38 @@ router.get('/achievements/:shortcutId', (req: Request, res: Response) => {
     `).get(profileId, String(shortcutId), String(shortcutId)) as any;
   }
 
+  // 3. If no direct link and name/title is provided, try fuzzy matching against game library
+  if (!link && nameQuery) {
+    const rawName = String(nameQuery).trim();
+    const cleanName = rawName
+      .replace(/\.exe$/i, '')
+      .replace(/\.sh$/i, '')
+      .replace(/\s*\(.*?\)\s*/g, '')
+      .trim();
+
+    const match = db.prepare(`
+      SELECT id as game_id, title, cover_image, total_achievements, unlocked_achievements
+      FROM games
+      WHERE profile_id = ? AND (
+        LOWER(title) = LOWER(?) OR
+        LOWER(title) LIKE LOWER(?) OR
+        LOWER(?) LIKE ('%' || LOWER(title) || '%')
+      )
+      LIMIT 1
+    `).get(profileId, cleanName, `%${cleanName}%`, cleanName) as any;
+
+    if (match) {
+      link = match;
+      // Auto-link so subsequent requests are instant by ID
+      try {
+        db.prepare(`
+          INSERT OR REPLACE INTO decky_links (id, profile_id, steam_shortcut_id, game_id, shortcut_name, linked_at)
+          VALUES (?, ?, ?, ?, ?, datetime('now'))
+        `).run(`auto_${Date.now()}`, profileId, String(shortcutId), link.game_id, rawName);
+      } catch (_) {}
+    }
+  }
+
   if (!link) {
     return res.status(404).json({
       linked: false,
@@ -305,7 +338,7 @@ router.get('/achievements/:shortcutId', (req: Request, res: Response) => {
   }
 
   const achievements = db.prepare(`
-    SELECT id, api_name, display_name, description, icon_unlocked, icon_locked, is_unlocked, unlocked_at, progress_current, progress_max
+    SELECT id, api_name, display_name, description, display_name_es, description_es, icon_unlocked, icon_locked, is_unlocked, unlocked_at, progress_current, progress_max
     FROM achievements
     WHERE game_id = ? AND profile_id = ?
     ORDER BY is_unlocked DESC, unlocked_at DESC, display_name ASC

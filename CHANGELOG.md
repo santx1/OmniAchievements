@@ -10,6 +10,23 @@ and this project adheres to the **`a.b.c`** versioning scheme:
 
 ---
 
+## [0.3.0] - 2026-11-08
+
+### Added
+- **Native Steam "Your Stuff" Achievements Display**: Integrated an advanced GamepadUI injection engine into the Decky plugin that places an official-styled Achievements card directly into the non-Steam game's **"Your Stuff"** tab in SteamOS.
+  - Displays native uppercase section header (**`ACHIEVEMENTS`** / **`LOGROS`**) with overall unlock progress and percentage.
+  - Interactive focusable card with Steam Deck's signature cyan focus ring glow (`#1a9fff`), smooth scaling, and gamepad navigation.
+  - Displays high-resolution progress bar and horizontal strip of recent unlocked and locked achievement badge artwork.
+  - Includes action prompt ("View all achievements" / "Ver todos los logros") with controller `(A)` button glyph.
+- **Full Achievements Browser Modal**: Selecting the Achievements card on the Steam Deck opens a full-screen, controller-navigable achievements browser modal (`showModal`) matching official Steam achievements with:
+  - Game title, header stats, and overall completion percentage.
+  - Filter tabs: *All*, *Unlocked*, and *Locked*.
+  - Scrollable list with 56px artwork badges, titles, descriptions, unlock timestamps, and point values.
+  - Full D-pad / stick navigation support with controller `(B)` button to smoothly close.
+- **Fuzzy Auto-Linking & Title Resolution**: Enhanced server `/api/decky/achievements/:shortcutId` and plugin backend to automatically resolve achievements by game title if a shortcut has not been manually paired yet, linking it automatically for future instant loads.
+
+---
+
 ## [0.2.5] - 2026-11-08
 
 ### Added

@@ -79,7 +79,7 @@ const Content = ({ serverApi }) => {
     const [achievements, setAchievements] = SP_REACT.useState([]);
     const [isLoading, setIsLoading] = SP_REACT.useState(false);
     // Self-Updater state
-    const [currentVersion, setCurrentVersion] = SP_REACT.useState("0.2.5");
+    const [currentVersion, setCurrentVersion] = SP_REACT.useState("0.3.0");
     const [latestVersion, setLatestVersion] = SP_REACT.useState(null);
     const [updateAvailable, setUpdateAvailable] = SP_REACT.useState(false);
     const [updateSource, setUpdateSource] = SP_REACT.useState("auto");
@@ -566,6 +566,665 @@ const Content = ({ serverApi }) => {
                                 wordBreak: "break-word"
                             }, children: updateStatusMsg }) })), updateAvailable && !updateSuccess && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleApplyUpdate, disabled: isApplyingUpdate, children: isApplyingUpdate ? "Updating Plugin Files..." : `Update to v${latestVersion} Now` }) })), updateSuccess && (SP_JSX.jsx(DFL.PanelSectionRow, { children: SP_JSX.jsx(DFL.ButtonItem, { layout: "below", onClick: handleReloadDecky, children: "Reload Decky Now" }) }))] })] }));
 };
+// ============================================================================
+// STEAM-NATIVE "YOUR STUFF" ACHIEVEMENTS INJECTION ENGINE
+// ============================================================================
+function injectNativeStyles() {
+    if (typeof document === "undefined")
+        return;
+    if (document.getElementById("omni-achievements-native-styles"))
+        return;
+    const styleEl = document.createElement("style");
+    styleEl.id = "omni-achievements-native-styles";
+    styleEl.textContent = `
+    .omni-your-stuff-section {
+      margin: 14px 0 24px 0;
+      width: 100%;
+      box-sizing: border-box;
+      font-family: var(--gp-body-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+      animation: omniFadeIn 0.25s ease-out;
+    }
+    @keyframes omniFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .omni-section-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: #8b929a;
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+    .omni-heading-progress {
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+    .omni-achievements-card {
+      background: rgba(30, 36, 44, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 16px 18px;
+      cursor: pointer;
+      transition: all 0.15s cubic-bezier(0.2, 0, 0, 1);
+      outline: none;
+      user-select: none;
+      box-sizing: border-box;
+      display: block;
+      width: 100%;
+      color: #ffffff;
+      text-decoration: none;
+      position: relative;
+    }
+    .omni-achievements-card:focus,
+    .omni-achievements-card:focus-visible,
+    .omni-achievements-card:hover,
+    .omni-achievements-card.gpfocus {
+      border-color: #1a9fff !important;
+      background: rgba(45, 55, 68, 0.9) !important;
+      box-shadow: 0 0 0 2px #1a9fff, 0 4px 20px rgba(26, 159, 255, 0.45) !important;
+      transform: scale(1.008);
+    }
+    .omni-card-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .omni-card-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .omni-card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .omni-card-pct-badge {
+      font-size: 12px;
+      font-weight: 700;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.15);
+      padding: 2px 8px;
+      border-radius: 9999px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .omni-progress-track {
+      width: 100%;
+      height: 7px;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 10px 0 14px 0;
+    }
+    .omni-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+    .omni-card-bottom-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .omni-badge-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    .omni-badge-item {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      flex-shrink: 0;
+    }
+    .omni-badge-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .omni-badge-thumb.locked {
+      filter: grayscale(100%) opacity(0.35);
+    }
+    .omni-badge-lock-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.4);
+    }
+    .omni-card-action {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .omni-achievements-card:focus .omni-card-action,
+    .omni-achievements-card:hover .omni-card-action {
+      color: #38bdf8;
+    }
+    .omni-controller-glyph {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #1a9fff;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Full Achievements Modal View */
+    .omni-modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: rgba(10, 14, 20, 0.92);
+      backdrop-filter: blur(24px);
+      display: flex;
+      flex-direction: column;
+      padding: 32px 48px;
+      box-sizing: border-box;
+      font-family: var(--gp-body-font, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+      color: #ffffff;
+      overflow: hidden;
+    }
+    .omni-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 16px;
+    }
+    .omni-modal-title {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+    }
+    .omni-modal-subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    .omni-modal-filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .omni-filter-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.05);
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      outline: none;
+    }
+    .omni-filter-btn:focus,
+    .omni-filter-btn.active {
+      background: #1a9fff !important;
+      border-color: #1a9fff !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 12px rgba(26, 159, 255, 0.5);
+    }
+    .omni-modal-list {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+      margin-bottom: 16px;
+    }
+    .omni-achievement-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      margin-bottom: 8px;
+      transition: all 0.15s ease;
+      cursor: pointer;
+      outline: none;
+    }
+    .omni-achievement-row:focus,
+    .omni-achievement-row:hover,
+    .omni-achievement-row.gpfocus {
+      background: rgba(45, 55, 68, 0.85) !important;
+      border-color: #1a9fff !important;
+      box-shadow: 0 0 0 2px #1a9fff, 0 4px 16px rgba(26, 159, 255, 0.35) !important;
+      transform: scale(1.005);
+    }
+    .omni-row-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      flex-shrink: 0;
+    }
+    .omni-row-icon.locked {
+      filter: grayscale(100%) opacity(0.35);
+    }
+    .omni-row-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .omni-row-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+    .omni-row-desc {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.4;
+      margin-bottom: 6px;
+    }
+    .omni-row-status {
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .omni-row-status.unlocked {
+      color: #10b981;
+    }
+    .omni-row-status.locked {
+      color: #64748b;
+    }
+    .omni-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .omni-close-btn {
+      padding: 8px 18px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      outline: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .omni-close-btn:focus,
+    .omni-close-btn:hover {
+      background: #ef4444;
+      border-color: #ef4444;
+    }
+  `;
+    document.head.appendChild(styleEl);
+}
+function findYourStuffContainer() {
+    if (typeof window === "undefined" || !window.location.href.includes("/library/app/")) {
+        return null;
+    }
+    // 1. Locate tabs to confirm if "Your Stuff" is currently the active tab
+    const tabs = Array.from(document.querySelectorAll('[role="tab"], button[class*="Tab"]'));
+    if (tabs.length > 0) {
+        const activeTab = tabs.find(t => t.getAttribute("aria-selected") === "true" ||
+            t.classList.contains("active") ||
+            t.className.includes("Active") ||
+            t.className.includes("Selected"));
+        if (activeTab) {
+            const text = activeTab.textContent?.toLowerCase() || "";
+            const isYourStuff = text.includes("your stuff") ||
+                text.includes("tus cosas") ||
+                text.includes("stuff") ||
+                text.includes("cosas") ||
+                text.includes("affaires") ||
+                text.includes("sachen") ||
+                tabs.indexOf(activeTab) === 1; // Tab at index 1 is standard "Your Stuff"
+            if (!isYourStuff) {
+                return null;
+            }
+        }
+    }
+    // 2. Locate the active tabpanel container
+    const tabPanel = document.querySelector('[role="tabpanel"]');
+    if (tabPanel) {
+        const playtime = tabPanel.querySelector('[class*="playtime"], [class*="Playtime"], [class*="PlayTime"]');
+        if (playtime) {
+            return { container: tabPanel, insertBefore: playtime.nextElementSibling };
+        }
+        const screenshots = tabPanel.querySelector('[class*="screenshot"], [class*="Screenshot"], [class*="media"], [class*="Media"]');
+        if (screenshots) {
+            return { container: tabPanel, insertBefore: screenshots };
+        }
+        return { container: tabPanel, insertBefore: null };
+    }
+    // 3. Fallback: Search by class name matching yourstuff
+    const yourStuffByClass = document.querySelector('[class*="appdetailsyourstuff"], [class*="AppDetailsYourStuff"], [class*="yourstuff"], [class*="YourStuff"]');
+    if (yourStuffByClass) {
+        const playtime = yourStuffByClass.querySelector('[class*="playtime"], [class*="Playtime"]');
+        return { container: yourStuffByClass, insertBefore: playtime ? playtime.nextElementSibling : null };
+    }
+    // 4. Fallback: Find playtime element's parent container
+    const allPlaytime = document.querySelector('[class*="playtime"], [class*="Playtime"], [class*="PlayTime"]');
+    if (allPlaytime && allPlaytime.parentElement) {
+        return { container: allPlaytime.parentElement, insertBefore: allPlaytime.nextElementSibling };
+    }
+    return null;
+}
+const AchievementsBrowserModal = ({ gameTitle, achievements, onClose }) => {
+    const isSpanish = (typeof navigator !== "undefined" && navigator.language?.startsWith("es")) || false;
+    const [filter, setFilter] = SP_REACT.useState("all");
+    const unlockedCount = achievements.filter(a => a.is_unlocked === 1).length;
+    const totalCount = achievements.length;
+    const progressPct = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
+    const filtered = achievements.filter(a => {
+        if (filter === "unlocked")
+            return a.is_unlocked === 1;
+        if (filter === "locked")
+            return a.is_unlocked !== 1;
+        return true;
+    });
+    SP_REACT.useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === "Escape" || e.key === "GamepadB" || e.code === "Escape") {
+                e.preventDefault();
+                onClose();
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [onClose]);
+    return (SP_JSX.jsxs("div", { className: "omni-modal-overlay", children: [SP_JSX.jsxs("div", { className: "omni-modal-header", children: [SP_JSX.jsxs("div", { children: [SP_JSX.jsxs("div", { className: "omni-modal-title", children: ["\uD83C\uDFC6 ", gameTitle, " ", isSpanish ? "- Logros" : "- Achievements"] }), SP_JSX.jsx("div", { className: "omni-modal-subtitle", children: isSpanish
+                                    ? `${unlockedCount} de ${totalCount} logros desbloqueados (${progressPct}%)`
+                                    : `${unlockedCount} of ${totalCount} achievements unlocked (${progressPct}%)` })] }), SP_JSX.jsxs("button", { className: "omni-close-btn Focusable", tabIndex: 0, onClick: onClose, children: [SP_JSX.jsx("span", { className: "omni-controller-glyph", style: { background: "#ef4444" }, children: "B" }), isSpanish ? "Cerrar" : "Close"] })] }), SP_JSX.jsx("div", { className: "omni-progress-track", style: { height: "9px", marginBottom: "16px" }, children: SP_JSX.jsx("div", { className: "omni-progress-fill", style: { width: `${progressPct}%` } }) }), SP_JSX.jsxs("div", { className: "omni-modal-filter-bar", children: [SP_JSX.jsxs("button", { className: `omni-filter-btn Focusable ${filter === "all" ? "active" : ""}`, tabIndex: 0, onClick: () => setFilter("all"), children: [isSpanish ? "Todos" : "All", " (", totalCount, ")"] }), SP_JSX.jsxs("button", { className: `omni-filter-btn Focusable ${filter === "unlocked" ? "active" : ""}`, tabIndex: 0, onClick: () => setFilter("unlocked"), children: [isSpanish ? "Desbloqueados" : "Unlocked", " (", unlockedCount, ")"] }), SP_JSX.jsxs("button", { className: `omni-filter-btn Focusable ${filter === "locked" ? "active" : ""}`, tabIndex: 0, onClick: () => setFilter("locked"), children: [isSpanish ? "Bloqueados" : "Locked", " (", totalCount - unlockedCount, ")"] })] }), SP_JSX.jsx("div", { className: "omni-modal-list", children: filtered.map(ach => {
+                    const isUnlocked = ach.is_unlocked === 1;
+                    const name = (isSpanish && ach.display_name_es) ? ach.display_name_es : ach.display_name;
+                    const desc = (isSpanish && ach.description_es) ? ach.description_es : ach.description;
+                    const icon = isUnlocked
+                        ? (ach.icon_unlocked || ach.icon_locked)
+                        : (ach.icon_locked || ach.icon_unlocked);
+                    return (SP_JSX.jsxs("div", { className: "omni-achievement-row Focusable", tabIndex: 0, children: [SP_JSX.jsx("img", { src: icon, className: `omni-row-icon ${isUnlocked ? "unlocked" : "locked"}`, alt: name }), SP_JSX.jsxs("div", { className: "omni-row-content", children: [SP_JSX.jsx("div", { className: "omni-row-name", children: name }), SP_JSX.jsx("div", { className: "omni-row-desc", children: desc }), SP_JSX.jsx("div", { className: `omni-row-status ${isUnlocked ? "unlocked" : "locked"}`, children: isUnlocked
+                                            ? (isSpanish ? "✓ Desbloqueado" : "✓ Unlocked")
+                                            : (isSpanish ? "🔒 Bloqueado" : "🔒 Locked") })] })] }, ach.id));
+                }) }), SP_JSX.jsx("div", { className: "omni-modal-footer", children: SP_JSX.jsxs("div", { style: { fontSize: "12px", color: "#64748b" }, children: ["\uD83C\uDFAE ", isSpanish ? "Cruceta / Stick para navegar • (B) para salir" : "D-pad or stick to browse • (B) to exit"] }) })] }));
+};
+const openFullAchievementsModal = (gameTitle, achievements) => {
+    injectNativeStyles();
+    // 1. Try using showModal from @decky/ui
+    try {
+        if (typeof DFL.showModal === "function") {
+            let modalRes = null;
+            modalRes = DFL.showModal(SP_JSX.jsx(AchievementsBrowserModal, { gameTitle: gameTitle, achievements: achievements, onClose: () => {
+                    if (modalRes?.Close)
+                        modalRes.Close();
+                } }), window);
+            if (modalRes)
+                return;
+        }
+    }
+    catch (e) {
+        console.warn("[OmniAchievements] showModal error, falling back to overlay root:", e);
+    }
+    // 2. Direct DOM overlay root fallback
+    let container = document.getElementById("omni-achievements-modal-root");
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "omni-achievements-modal-root";
+        document.body.appendChild(container);
+    }
+    const handleClose = () => {
+        if (container && container.parentNode) {
+            container.parentNode.removeChild(container);
+        }
+    };
+    const reactDOM = window.SP_REACTDOM || window.ReactDOM;
+    if (reactDOM?.createRoot) {
+        const root = reactDOM.createRoot(container);
+        root.render(SP_JSX.jsx(AchievementsBrowserModal, { gameTitle: gameTitle, achievements: achievements, onClose: () => {
+                handleClose();
+                root.unmount();
+            } }));
+    }
+    else if (reactDOM?.render) {
+        reactDOM.render(SP_JSX.jsx(AchievementsBrowserModal, { gameTitle: gameTitle, achievements: achievements, onClose: handleClose }), container);
+    }
+};
+const NativeSteamAchievementsSection = ({ gameTitle, achievements, targetInfo }) => {
+    const isSpanish = (typeof navigator !== "undefined" && navigator.language?.startsWith("es")) || false;
+    const sectionRef = SP_REACT.useRef(null);
+    const unlockedCount = achievements.filter(a => a.is_unlocked === 1).length;
+    const totalCount = achievements.length;
+    const progressPct = totalCount > 0 ? Math.round((unlockedCount / totalCount) * 100) : 0;
+    const unlocked = achievements.filter(a => a.is_unlocked === 1);
+    const locked = achievements.filter(a => a.is_unlocked !== 1);
+    const recentBadges = [...unlocked, ...locked].slice(0, 5);
+    SP_REACT.useEffect(() => {
+        if (sectionRef.current && targetInfo?.container && targetInfo?.insertBefore) {
+            if (sectionRef.current.nextElementSibling !== targetInfo.insertBefore) {
+                targetInfo.container.insertBefore(sectionRef.current, targetInfo.insertBefore);
+            }
+        }
+    }, [targetInfo]);
+    const handleClick = () => {
+        openFullAchievementsModal(gameTitle, achievements);
+    };
+    return (SP_JSX.jsxs("div", { ref: sectionRef, className: "omni-your-stuff-section", id: "omniachievements-your-stuff-section", children: [SP_JSX.jsxs("div", { className: "omni-section-heading", children: [SP_JSX.jsx("span", { children: isSpanish ? "LOGROS" : "ACHIEVEMENTS" }), SP_JSX.jsxs("span", { className: "omni-heading-progress", children: [unlockedCount, " / ", totalCount, " (", progressPct, "%)"] })] }), SP_JSX.jsxs("div", { className: "omni-achievements-card Focusable", tabIndex: 0, role: "button", "aria-label": `${gameTitle} Achievements: ${unlockedCount} of ${totalCount} unlocked. Press A to view all.`, onClick: handleClick, onKeyDown: (e) => {
+                    if (e.key === "Enter" || e.key === " " || e.key === "GamepadA") {
+                        e.preventDefault();
+                        handleClick();
+                    }
+                }, children: [SP_JSX.jsxs("div", { className: "omni-card-top-row", children: [SP_JSX.jsxs("div", { className: "omni-card-title-group", children: [SP_JSX.jsx(TrophyIcon, { size: 18, color: "#f59e0b" }), SP_JSX.jsx("span", { className: "omni-card-title", children: isSpanish ? "Progreso de Logros" : "Achievements Progress" })] }), SP_JSX.jsxs("div", { className: "omni-card-pct-badge", children: [progressPct, "%"] })] }), SP_JSX.jsx("div", { className: "omni-progress-track", children: SP_JSX.jsx("div", { className: "omni-progress-fill", style: { width: `${progressPct}%` } }) }), SP_JSX.jsxs("div", { className: "omni-card-bottom-row", children: [SP_JSX.jsx("div", { className: "omni-badge-strip", children: recentBadges.map(ach => (SP_JSX.jsxs("div", { className: "omni-badge-item", title: ach.display_name, children: [SP_JSX.jsx("img", { src: ach.is_unlocked === 1 ? (ach.icon_unlocked || ach.icon_locked) : (ach.icon_locked || ach.icon_unlocked), className: `omni-badge-thumb ${ach.is_unlocked === 1 ? "unlocked" : "locked"}`, alt: ach.display_name }), ach.is_unlocked !== 1 && (SP_JSX.jsx("div", { className: "omni-badge-lock-overlay", children: SP_JSX.jsx(LockIcon, { size: 12, color: "#ffffff" }) }))] }, ach.id))) }), SP_JSX.jsxs("div", { className: "omni-card-action", children: [SP_JSX.jsx("span", { className: "omni-action-text", children: isSpanish ? "Ver todos los logros" : "View all achievements" }), SP_JSX.jsx("span", { className: "omni-controller-glyph", children: "A" })] })] })] })] }));
+};
+const YourStuffInjector = () => {
+    const [targetInfo, setTargetInfo] = SP_REACT.useState(null);
+    const [gameTitle, setGameTitle] = SP_REACT.useState("");
+    const [achievements, setAchievements] = SP_REACT.useState([]);
+    const lastCheckedAppIdRef = SP_REACT.useRef("");
+    const cachedAchievementsRef = SP_REACT.useRef(new Map());
+    SP_REACT.useEffect(() => {
+        injectNativeStyles();
+        let isDestroyed = false;
+        const checkState = async () => {
+            if (isDestroyed)
+                return;
+            const url = window.location.href || "";
+            const match = url.match(/\/library\/app\/([0-9]+)/);
+            if (!match) {
+                if (targetInfo)
+                    setTargetInfo(null);
+                return;
+            }
+            const appId = match[1];
+            // If app ID changed, fetch achievements
+            if (lastCheckedAppIdRef.current !== appId) {
+                lastCheckedAppIdRef.current = appId;
+                if (cachedAchievementsRef.current.has(appId)) {
+                    const cached = cachedAchievementsRef.current.get(appId);
+                    setGameTitle(cached.title);
+                    setAchievements(cached.list);
+                }
+                else {
+                    let title = "";
+                    try {
+                        const details = window.appDetailsStore?.GetAppDetails?.(Number(appId));
+                        title = details?.strDisplayName || "";
+                    }
+                    catch (_) { }
+                    if (!title) {
+                        const titleElem = document.querySelector('h1, [class*="HeaderTitle"], [class*="AppTitle"], [class*="game_title"]');
+                        if (titleElem)
+                            title = titleElem.textContent?.trim() || "";
+                    }
+                    try {
+                        const res = await callBackend("get_achievements", { shortcut_id: appId, title });
+                        if (res && res.linked && Array.isArray(res.achievements) && res.achievements.length > 0) {
+                            const fetchedTitle = res.game?.title || title || "Game";
+                            cachedAchievementsRef.current.set(appId, { title: fetchedTitle, list: res.achievements });
+                            setGameTitle(fetchedTitle);
+                            setAchievements(res.achievements);
+                        }
+                        else {
+                            setAchievements([]);
+                        }
+                    }
+                    catch (_) {
+                        setAchievements([]);
+                    }
+                }
+            }
+            const found = findYourStuffContainer();
+            if (found) {
+                if (!targetInfo || targetInfo.container !== found.container || targetInfo.insertBefore !== found.insertBefore) {
+                    setTargetInfo(found);
+                }
+            }
+            else {
+                if (targetInfo)
+                    setTargetInfo(null);
+            }
+        };
+        checkState();
+        const interval = setInterval(checkState, 400);
+        return () => {
+            isDestroyed = true;
+            clearInterval(interval);
+        };
+    }, [targetInfo]);
+    if (!targetInfo || achievements.length === 0)
+        return null;
+    return SP_REACTDOM.createPortal(SP_JSX.jsx(NativeSteamAchievementsSection, { gameTitle: gameTitle, achievements: achievements, shortcutId: lastCheckedAppIdRef.current, targetInfo: targetInfo }), targetInfo.container);
+};
+// Standalone observer controller for maximum compatibility across all Decky versions
+let standaloneInterval = null;
+let standaloneRoot = null;
+function startStandaloneObserver() {
+    injectNativeStyles();
+    if (standaloneInterval)
+        return;
+    let currentAppId = "";
+    let gameTitle = "";
+    let achievements = [];
+    const cache = new Map();
+    standaloneInterval = setInterval(async () => {
+        const url = window.location.href || "";
+        const match = url.match(/\/library\/app\/([0-9]+)/);
+        if (!match) {
+            if (standaloneRoot) {
+                const el = document.getElementById("omniachievements-your-stuff-section");
+                if (el?.parentNode)
+                    el.parentNode.removeChild(el);
+            }
+            return;
+        }
+        const appId = match[1];
+        if (appId !== currentAppId) {
+            currentAppId = appId;
+            if (cache.has(appId)) {
+                const c = cache.get(appId);
+                gameTitle = c.title;
+                achievements = c.list;
+            }
+            else {
+                let title = "";
+                try {
+                    const details = window.appDetailsStore?.GetAppDetails?.(Number(appId));
+                    title = details?.strDisplayName || "";
+                }
+                catch (_) { }
+                if (!title) {
+                    const titleElem = document.querySelector('h1, [class*="HeaderTitle"], [class*="AppTitle"], [class*="game_title"]');
+                    if (titleElem)
+                        title = titleElem.textContent?.trim() || "";
+                }
+                try {
+                    const res = await callBackend("get_achievements", { shortcut_id: appId, title });
+                    if (res && res.linked && Array.isArray(res.achievements) && res.achievements.length > 0) {
+                        gameTitle = res.game?.title || title || "Game";
+                        achievements = res.achievements;
+                        cache.set(appId, { title: gameTitle, list: achievements });
+                    }
+                    else {
+                        achievements = [];
+                    }
+                }
+                catch (_) {
+                    achievements = [];
+                }
+            }
+        }
+        if (achievements.length === 0) {
+            const existing = document.getElementById("omniachievements-your-stuff-section");
+            if (existing?.parentNode)
+                existing.parentNode.removeChild(existing);
+            return;
+        }
+        const found = findYourStuffContainer();
+        if (found) {
+            const existing = document.getElementById("omniachievements-your-stuff-section");
+            if (!existing) {
+                const mountDiv = document.createElement("div");
+                if (found.insertBefore) {
+                    found.container.insertBefore(mountDiv, found.insertBefore);
+                }
+                else {
+                    found.container.prepend(mountDiv);
+                }
+                const reactDOM = window.SP_REACTDOM || window.ReactDOM;
+                if (reactDOM?.createRoot) {
+                    standaloneRoot = reactDOM.createRoot(mountDiv);
+                    standaloneRoot.render(SP_JSX.jsx(NativeSteamAchievementsSection, { gameTitle: gameTitle, achievements: achievements, shortcutId: currentAppId, targetInfo: found }));
+                }
+                else if (reactDOM?.render) {
+                    reactDOM.render(SP_JSX.jsx(NativeSteamAchievementsSection, { gameTitle: gameTitle, achievements: achievements, shortcutId: currentAppId, targetInfo: found }), mountDiv);
+                }
+            }
+        }
+        else {
+            const existing = document.getElementById("omniachievements-your-stuff-section");
+            if (existing?.parentNode)
+                existing.parentNode.removeChild(existing);
+        }
+    }, 450);
+}
+function stopStandaloneObserver() {
+    if (standaloneInterval) {
+        clearInterval(standaloneInterval);
+        standaloneInterval = null;
+    }
+    const existing = document.getElementById("omniachievements-your-stuff-section");
+    if (existing?.parentNode)
+        existing.parentNode.removeChild(existing);
+}
 // Official Decky definePlugin helper
 function defineDeckyPlugin(fn) {
     return (...args) => fn(...args);
@@ -574,13 +1233,34 @@ var index = defineDeckyPlugin((serverApi) => {
     if (serverApi) {
         globalServerApi = serverApi;
     }
+    // 1. Try registering global component with routerHook
+    try {
+        const rHook = serverApi?.routerHook || window.DeckyPluginLoader?.routerHook;
+        if (rHook?.addGlobalComponent) {
+            rHook.addGlobalComponent("OmniAchievementsYourStuffInjector", YourStuffInjector);
+        }
+    }
+    catch (e) {
+        console.warn("[OmniAchievements] routerHook.addGlobalComponent not available, using standalone observer:", e);
+    }
+    // 2. Start standalone observer controller for guaranteed injection
+    startStandaloneObserver();
     return {
         name: "OmniAchievements",
         title: SP_JSX.jsx("div", { className: DFL.staticClasses.Title, children: "OmniAchievements" }),
         titleView: SP_JSX.jsx("div", { className: DFL.staticClasses.Title, children: "OmniAchievements" }),
         content: SP_JSX.jsx(Content, { serverApi: serverApi }),
         icon: SP_JSX.jsx(TrophyIcon, {}),
-        onDismount() { }
+        onDismount() {
+            try {
+                const rHook = serverApi?.routerHook || window.DeckyPluginLoader?.routerHook;
+                if (rHook?.removeGlobalComponent) {
+                    rHook.removeGlobalComponent("OmniAchievementsYourStuffInjector");
+                }
+            }
+            catch (_) { }
+            stopStandaloneObserver();
+        }
     };
 });
 

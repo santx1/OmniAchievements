@@ -237,13 +237,22 @@ class Plugin:
 
     async def get_achievements(self, *args, **kwargs):
         shortcut_id = None
+        title = ""
         if len(args) == 1 and isinstance(args[0], dict):
             shortcut_id = args[0].get("shortcut_id") or args[0].get("shortcutId")
+            title = args[0].get("title") or args[0].get("name") or ""
         elif args:
             shortcut_id = args[0]
+            if len(args) > 1:
+                title = args[1]
         else:
             shortcut_id = kwargs.get("shortcut_id") or kwargs.get("shortcutId")
-        return self._api_request(f"/achievements/{shortcut_id}")
+            title = kwargs.get("title") or kwargs.get("name") or ""
+
+        url = f"/achievements/{shortcut_id}"
+        if title:
+            url += f"?name={urllib.parse.quote(str(title))}"
+        return self._api_request(url)
 
     async def toggle_achievement(self, *args, **kwargs):
         data = {}
@@ -331,10 +340,10 @@ class Plugin:
             if os.path.exists(plugin_path):
                 with open(plugin_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    return data.get("version", "0.2.5")
+                    return data.get("version", "0.3.0")
         except Exception as e:
             print(f"[OmniAchievements] Error reading local version: {e}")
-        return "0.2.5"
+        return "0.3.0"
 
     def _compare_versions(self, v1, v2):
         try:
