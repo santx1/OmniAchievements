@@ -27,8 +27,9 @@ If you don't have Decky Loader installed yet:
 1. Download **`OmniAchievements-Decky.zip`** from [GitHub Releases](https://github.com/santx1/OmniAchievements/releases).
 2. Extract the archive into `~/homebrew/plugins/OmniAchievements/`:
 ```bash
-mkdir -p ~/homebrew/plugins/OmniAchievements
-unzip -o OmniAchievements-Decky.zip -d ~/homebrew/plugins/OmniAchievements/
+sudo mkdir -p ~/homebrew/plugins/OmniAchievements
+sudo unzip -o OmniAchievements-Decky.zip -d ~/homebrew/plugins/OmniAchievements/
+sudo chown -R deck:deck ~/homebrew/plugins/OmniAchievements
 sudo systemctl restart plugin_loader.service
 ```
 
@@ -38,10 +39,11 @@ You can copy the `decky-plugin` folder to your handheld via SSH, SMB network sha
 On your handheld terminal:
 ```bash
 # Create directory in Decky plugins folder
-mkdir -p ~/homebrew/plugins/OmniAchievements
+sudo mkdir -p ~/homebrew/plugins/OmniAchievements
 
 # Copy plugin files (plugin.json, main.py, dist/index.js) into the folder
-cp -r /path/to/decky-plugin/* ~/homebrew/plugins/OmniAchievements/
+sudo cp -r /path/to/decky-plugin/* ~/homebrew/plugins/OmniAchievements/
+sudo chown -R deck:deck ~/homebrew/plugins/OmniAchievements
 
 # Restart Decky Loader service
 sudo systemctl restart plugin_loader.service
@@ -55,7 +57,7 @@ sudo systemctl restart plugin_loader.service
 In the OmniAchievements Web App, go to **Settings > Legion Go / Decky**, click **Generate Token**, and click **"Copy 1-Line Command"**.
 Paste that single command into **Konsole** (or via SSH) on your handheld:
 ```bash
-mkdir -p ~/homebrew/settings/OmniAchievements ~/.config && echo '{"server_url":"http://192.168.1.XXX:3001","token":"YOUR_TOKEN_HERE"}' | tee ~/homebrew/settings/OmniAchievements/config.json ~/.config/omni_achievements_decky.json >/dev/null && sudo systemctl restart plugin_loader.service
+sudo mkdir -p ~/homebrew/settings/OmniAchievements ~/.config && echo '{"server_url":"http://192.168.1.XXX:3001","token":"YOUR_TOKEN_HERE"}' | sudo tee ~/homebrew/settings/OmniAchievements/config.json ~/.config/omni_achievements_decky.json >/dev/null && sudo systemctl restart plugin_loader.service
 ```
 Restart Decky or open the menu, and it will be immediately connected!
 

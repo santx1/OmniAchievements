@@ -240,10 +240,11 @@ Navigate to `http://<YOUR_SERVER_IP>:3001` (or your domain) and enter your Maste
 
 #### Quick Installation:
 1. Download **`OmniAchievements-Decky.zip`** from [GitHub Releases](https://github.com/santx1/OmniAchievements/releases).
-2. Extract the archive into:
+2. Extract the archive into `~/homebrew/plugins/OmniAchievements`:
    ```bash
-   mkdir -p ~/homebrew/plugins/OmniAchievements
-   unzip -o OmniAchievements-Decky.zip -d ~/homebrew/plugins/OmniAchievements
+   sudo mkdir -p ~/homebrew/plugins/OmniAchievements
+   sudo unzip -o OmniAchievements-Decky.zip -d ~/homebrew/plugins/OmniAchievements
+   sudo chown -R deck:deck ~/homebrew/plugins/OmniAchievements
    ```
 3. Restart Decky Loader:
    ```bash
@@ -254,14 +255,14 @@ Navigate to `http://<YOUR_SERVER_IP>:3001` (or your domain) and enter your Maste
 In the OmniAchievements Web App, go to **Settings > Legion Go / Decky**, click **Generate Token**, and click **"Copy 1-Line Command"**. 
 Run that single command in **Konsole** (or via SSH):
 ```bash
-mkdir -p ~/homebrew/settings/OmniAchievements ~/.config && echo '{"server_url":"http://<YOUR_SERVER_IP>:3001","token":"<YOUR_TOKEN>"}' | tee ~/homebrew/settings/OmniAchievements/config.json ~/.config/omni_achievements_decky.json >/dev/null && sudo systemctl restart plugin_loader.service
+sudo mkdir -p ~/homebrew/settings/OmniAchievements ~/.config && echo '{"server_url":"http://<YOUR_SERVER_IP>:3001","token":"<YOUR_TOKEN>"}' | sudo tee ~/homebrew/settings/OmniAchievements/config.json ~/.config/omni_achievements_decky.json >/dev/null && sudo systemctl restart plugin_loader.service
 ```
 Your server URL and pairing token are now permanently configured!
 
 #### 🔧 Fixing Permissions If Update Gives "Permission Denied":
-If you previously installed the plugin as `root` and the in-menu updater reports a permission error, run this 1-line command on your handheld:
+To ensure the plugin self-updater has full write permissions on your handheld:
 ```bash
-sudo chown -R deck:deck ~/homebrew/plugins/OmniAchievements && chmod -R 755 ~/homebrew/plugins/OmniAchievements
+sudo chown -R deck:deck ~/homebrew/plugins/OmniAchievements && sudo chmod -R 755 ~/homebrew/plugins/OmniAchievements
 ```
 
 ---

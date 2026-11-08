@@ -1151,7 +1151,7 @@ export const SettingsView: React.FC = () => {
                   type="button"
                   onClick={() => {
                     const serverOrigin = window.location.origin.replace(/^http:\/\/localhost/, 'http://' + window.location.hostname);
-                    const cmd = `mkdir -p ~/homebrew/settings/OmniAchievements ~/.config && echo '{"server_url":"${serverOrigin}","token":"${pairingToken}"}' | tee ~/homebrew/settings/OmniAchievements/config.json ~/.config/omni_achievements_decky.json >/dev/null && sudo systemctl restart plugin_loader.service`;
+                    const cmd = `sudo mkdir -p ~/homebrew/settings/OmniAchievements ~/.config && echo '{"server_url":"${serverOrigin}","token":"${pairingToken}"}' | sudo tee ~/homebrew/settings/OmniAchievements/config.json ~/.config/omni_achievements_decky.json >/dev/null && sudo systemctl restart plugin_loader.service`;
                     navigator.clipboard.writeText(cmd);
                     setCopiedCmd(true);
                     setTimeout(() => setCopiedCmd(false), 2000);
@@ -1166,7 +1166,7 @@ export const SettingsView: React.FC = () => {
                 Run this single command on your Steam Deck / handheld to save the config and reload Decky instantly:
               </p>
               <code className="text-[10px] font-mono text-cyan-200 block break-all bg-black/50 p-2 rounded-xl select-all border border-slate-800">
-                mkdir -p ~/homebrew/settings/OmniAchievements ~/.config &amp;&amp; echo '{JSON.stringify({ server_url: window.location.origin, token: pairingToken })}' | tee ~/homebrew/settings/OmniAchievements/config.json ~/.config/omni_achievements_decky.json &gt;/dev/null &amp;&amp; sudo systemctl restart plugin_loader.service
+                sudo mkdir -p ~/homebrew/settings/OmniAchievements ~/.config &amp;&amp; echo '{JSON.stringify({ server_url: window.location.origin, token: pairingToken })}' | sudo tee ~/homebrew/settings/OmniAchievements/config.json ~/.config/omni_achievements_decky.json &gt;/dev/null &amp;&amp; sudo systemctl restart plugin_loader.service
               </code>
             </div>
           )}

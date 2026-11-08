@@ -10,8 +10,9 @@ Synchronize and display custom achievements on non-Steam games in SteamOS on you
 2. In Desktop Mode or via SSH / SMB:
    - Extract this archive to `~/homebrew/plugins/OmniAchievements`:
      ```bash
-     mkdir -p ~/homebrew/plugins/OmniAchievements
-     cp -r * ~/homebrew/plugins/OmniAchievements/
+     sudo mkdir -p ~/homebrew/plugins/OmniAchievements
+     sudo cp -r * ~/homebrew/plugins/OmniAchievements/
+     sudo chown -R deck:deck ~/homebrew/plugins/OmniAchievements
      ```
 3. Restart Decky:
    ```bash
