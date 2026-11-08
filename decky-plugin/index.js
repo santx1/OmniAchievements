@@ -79,7 +79,7 @@ const Content = ({ serverApi }) => {
     const [achievements, setAchievements] = SP_REACT.useState([]);
     const [isLoading, setIsLoading] = SP_REACT.useState(false);
     // Self-Updater state
-    const [currentVersion, setCurrentVersion] = SP_REACT.useState("0.2.3");
+    const [currentVersion, setCurrentVersion] = SP_REACT.useState("0.2.4");
     const [latestVersion, setLatestVersion] = SP_REACT.useState(null);
     const [updateAvailable, setUpdateAvailable] = SP_REACT.useState(false);
     const [updateSource, setUpdateSource] = SP_REACT.useState("auto");

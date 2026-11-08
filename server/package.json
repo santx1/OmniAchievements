@@ -1,6 +1,6 @@
 {
   "name": "omniachievements-server",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Self-hosted cross-platform game & achievement synchronizer",
   "main": "dist/index.js",
   "scripts": {
