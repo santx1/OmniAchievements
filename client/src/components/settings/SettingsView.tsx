@@ -329,9 +329,14 @@ export const SettingsView: React.FC = () => {
     setIsGeneratingPairToken(true);
     try {
       const resData = await api.pairDecky(activeProfile.id);
-      setPairingToken(resData.token || `decky_session_${activeProfile.id}`);
-    } catch (err) {
-      setPairingToken(`omni_token_${activeProfile.id}_${Date.now()}`);
+      if (resData && resData.token) {
+        setPairingToken(resData.token);
+      } else {
+        throw new Error('Server did not return a valid token');
+      }
+    } catch (err: any) {
+      console.error('Failed to generate Decky pairing token:', err);
+      alert('Failed to generate pairing token: ' + (err.message || 'Please check your connection and master password'));
     } finally {
       setIsGeneratingPairToken(false);
     }

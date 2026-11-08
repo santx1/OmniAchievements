@@ -134,8 +134,40 @@ router.get('/plugin-bundle', (req: Request, res: Response) => {
 router.post('/pair', (req: Request, res: Response) => {
   const { masterPassword, profileId, pin } = req.body;
 
-  if (masterPassword !== config.masterPassword) {
-    return res.status(401).json({ error: 'Invalid master password' });
+  // 1. Verify Master authentication via Authorization Bearer token, header, or body
+  let isAuthed = false;
+
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const bearer = authHeader.split(' ')[1];
+    try {
+      const decoded = jwt.verify(bearer, config.jwtSecret) as any;
+      if (decoded.role === 'master' || decoded.type === 'master_access') {
+        isAuthed = true;
+      }
+    } catch {}
+  }
+
+  const masterKeyHeader = req.headers['x-master-password'];
+  if (masterKeyHeader && masterKeyHeader === config.masterPassword) {
+    isAuthed = true;
+  }
+
+  if (!isAuthed && masterPassword) {
+    if (masterPassword === config.masterPassword) {
+      isAuthed = true;
+    } else {
+      try {
+        const decoded = jwt.verify(masterPassword, config.jwtSecret) as any;
+        if (decoded.role === 'master' || decoded.type === 'master_access') {
+          isAuthed = true;
+        }
+      } catch {}
+    }
+  }
+
+  if (!isAuthed) {
+    return res.status(401).json({ error: 'Master authentication required to generate Decky pairing token' });
   }
 
   const profile = db.prepare('SELECT * FROM profiles WHERE id = ?').get(profileId) as any;
@@ -143,13 +175,13 @@ router.post('/pair', (req: Request, res: Response) => {
     return res.status(404).json({ error: 'Profile not found' });
   }
 
-  if (pin && !bcrypt.compareSync(String(pin).trim(), profile.pin_hash)) {
+  if (pin && profile.pin_hash && !bcrypt.compareSync(String(pin).trim(), profile.pin_hash)) {
     return res.status(401).json({ error: 'Invalid profile PIN' });
   }
 
   // Token valid for 1 year for Decky plugin
   const deckyToken = jwt.sign(
-    { role: 'decky_client', profileId: profile.id, device: 'Legion Go SteamOS' },
+    { role: 'decky_client', profileId: profile.id, device: 'SteamOS Handheld' },
     config.jwtSecret,
     { expiresIn: '365d' }
   );
