@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -127,7 +129,7 @@ jobs:
           # Write clean release notes
           echo "### 📦 Release Downloads" > release_notes.md
           echo "- 🍏 **\`OmniAchievements.ipa\`**: Native iOS & iPadOS application package. Ready to install with **SideStore**, **AltStore**, **TrollStore**, or **Sideloadly**. *(Do NOT uncompress this file)*" >> release_notes.md
-          echo "- 🕹️ **\`OmniAchievements-Decky.zip\`**: SteamOS / Decky Loader plugin for Lenovo Legion Go & Steam Deck. Extract into \`~/homebrew/plugins/OmniAchievements\` and restart Decky. Supports 1-click in-Decky self-updating!" >> release_notes.md
+          echo "- 🕹️ **\`OmniAchievements-Decky.zip\`**: SteamOS / Decky Loader plugin for Steam Deck & other handhelds. Extract into \`~/homebrew/plugins/OmniAchievements\` and restart Decky. Supports 1-click in-Decky self-updating!" >> release_notes.md
           echo "" >> release_notes.md
           echo "---" >> release_notes.md
           echo "" >> release_notes.md
@@ -135,6 +137,26 @@ jobs:
           echo "- **\`a\`**: Main architecture version (current: \`0\`)" >> release_notes.md
           echo "- **\`b\`**: Major feature updates" >> release_notes.md
           echo "- **\`c\`**: Minor improvements and bug fixes" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "---" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### 📝 What's Changed in this Release" >> release_notes.md
+
+          # Ensure all tags are fetched for changelog comparison
+          git fetch --tags --force 2>/dev/null || true
+
+          # Find previous tag (prior to current tag)
+          PREV_TAG=$(git tag -l --sort=-v:refname "v*" | grep -v "^${TAG}$" | head -n 1 || true)
+          if [ -n "$PREV_TAG" ]; then
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${TAG}" >> release_notes.md
+            echo "" >> release_notes.md
+            git log "${PREV_TAG}..HEAD" --pretty=format:"* %s (%h)" --no-merges >> release_notes.md
+          else
+            echo "**Full Changelog**: https://github.com/${{ github.repository }}/commits/${TAG}" >> release_notes.md
+            echo "" >> release_notes.md
+            git log -n 25 --pretty=format:"* %s (%h)" --no-merges >> release_notes.md
+          fi
+          echo "" >> release_notes.md
 
           # 1. Clean up legacy 'latest' pseudo-release and tag if present
           if gh release view "latest" >/dev/null 2>&1; then

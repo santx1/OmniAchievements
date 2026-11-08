@@ -95,7 +95,7 @@ export const SettingsView: React.FC = () => {
   const [isUpdatingServer, setIsUpdatingServer] = useState(false);
   const [serverSuccessMsg, setServerSuccessMsg] = useState<string | null>(null);
 
-  // Legion Go / Decky Plugin pairing
+  // Steam Deck & Handhelds / Decky Plugin pairing
   const [pairingToken, setPairingToken] = useState<string | null>(null);
   const [isGeneratingPairToken, setIsGeneratingPairToken] = useState(false);
   const [copiedToken, setCopiedToken] = useState(false);
@@ -1081,7 +1081,7 @@ export const SettingsView: React.FC = () => {
         )}
       </div>
 
-      {/* 2. Decky Plugin (Legion Go S SteamOS Integration) */}
+      {/* 2. Decky Plugin (Steam Deck & Handhelds SteamOS Integration) */}
       <div className="p-6 rounded-3xl glass dark:glass border border-cyan-500/30 shadow-sm space-y-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400">

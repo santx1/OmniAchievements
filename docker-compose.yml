@@ -2,6 +2,7 @@ services:
   omniachievements:
     container_name: omniachievements
     image: ghcr.io/santx1/omniachievements:latest
+    pull_policy: always
     # To build from source locally instead of pulling from GHCR, uncomment the build section:
     # build:
     #   context: .

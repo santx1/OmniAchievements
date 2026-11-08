@@ -141,7 +141,7 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Self-Updater state
-  const [currentVersion, setCurrentVersion] = useState("0.2.4");
+  const [currentVersion, setCurrentVersion] = useState("0.2.5");
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateSource, setUpdateSource] = useState<"auto" | "server" | "github">("auto");
@@ -604,7 +604,7 @@ const Content: FC<{ serverApi?: any }> = ({ serverApi }) => {
 
         <PanelSectionRow>
           <div style={{ fontSize: "10px", color: "#888", width: "100%", padding: "0 2px" }}>
-            💡 <em>Get your Pairing Token in OmniAchievements Web/iOS App: <strong>Settings &gt; Legion Go / Decky</strong></em>
+            💡 <em>Get your Pairing Token in OmniAchievements Web/iOS App: <strong>Settings &gt; Steam Deck &amp; Handhelds</strong></em>
           </div>
         </PanelSectionRow>
 

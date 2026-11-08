@@ -52,7 +52,7 @@ function deckyAuth(req: Request, res: Response, next: any) {
 }
 
 /**
- * Ping endpoint to test connection from Legion Go
+ * Ping endpoint to test connection from Steam Deck & Handhelds
  */
 router.get('/ping', (req: Request, res: Response) => {
   res.json({

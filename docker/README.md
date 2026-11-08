@@ -142,6 +142,7 @@ By mapping `-v ./data:/app/data` (or `-v $(pwd)/data:/app/data`):
      omniachievements:
        container_name: omniachievements
        image: ghcr.io/santx1/omniachievements:latest
+       pull_policy: always
        restart: unless-stopped
        ports:
          - "3001:3001"
@@ -158,6 +159,12 @@ By mapping `-v ./data:/app/data` (or `-v $(pwd)/data:/app/data`):
          - /mnt/tank/omniachievements:/app/data
    ```
 4. Click **Save** / **Install**.
+
+> [!TIP] Updating OmniAchievements on TrueNAS SCALE (No Command Line Needed)
+> Because `pull_policy: always` is specified, whenever you want to update to the latest release:
+> 1. In the TrueNAS Web UI, navigate to **Apps**.
+> 2. Click the three dots (⋮) on **omniachievements** and select **Edit** (or **Redeploy**).
+> 3. Click **Save**. TrueNAS will automatically query GHCR, pull the newest image version, and restart the container while leaving your database and saves untouched in `/mnt/tank/omniachievements`.
 
 ##### Option B: TrueNAS SCALE 24.04 and earlier (GUI Custom App Form)
 1. Go to **Apps** > **Discover Apps** > click **Custom App** in the top-right corner.
@@ -242,4 +249,4 @@ achievements.yourdomain.com {
 
 - **Web Browser**: Navigate to `http://<YOUR_SERVER_IP>:3001` (or your domain).
 - **iOS & iPadOS**: Install the PWA or native IPA from [GitHub Releases](https://github.com/santx1/OmniAchievements/releases), open Settings, and enter your server URL (`http://<YOUR_SERVER_IP>:3001`).
-- **SteamOS (Steam Deck & Other Handhelds)**: Install the OmniAchievements Decky plugin from [GitHub Releases](https://github.com/santx1/OmniAchievements/releases), open the Quick Access Menu, enter your server URL, and paste your device Pairing Token from **Settings > Legion Go / Decky** in the web app.
+- **SteamOS (Steam Deck & Other Handhelds)**: Install the OmniAchievements Decky plugin from [GitHub Releases](https://github.com/santx1/OmniAchievements/releases), open the Quick Access Menu, enter your server URL, and paste your device Pairing Token from **Settings > Steam Deck & Handhelds** in the web app.

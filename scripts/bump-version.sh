@@ -74,7 +74,12 @@ sed -i -E "s/\"version\": \"[^\"]+\"/\"version\": \"$NEW_VERSION\"/" "$ROOT_DIR/
 sed -i -E "s/\"version\": \"[^\"]+\"/\"version\": \"$NEW_VERSION\"/" "$ROOT_DIR/decky-plugin/plugin.json"
 sed -i -E "s/\"version\": \"[^\"]+\"/\"version\": \"$NEW_VERSION\"/" "$ROOT_DIR/decky-plugin/package.json"
 
-# 5. Update iOS Xcode project MARKETING_VERSION
+# 5. Update decky-plugin/src/index.tsx & decky-plugin/main.py
+sed -i -E "s/currentVersion, setCurrentVersion\] = useState\(\"[^\"]+\"\)/currentVersion, setCurrentVersion] = useState\(\"$NEW_VERSION\"\)/" "$ROOT_DIR/decky-plugin/src/index.tsx"
+sed -i -E "s/\"version\", \"[0-9.]+\"/\"version\", \"$NEW_VERSION\"/" "$ROOT_DIR/decky-plugin/main.py"
+sed -i -E "s/return \"[0-9.]+\"/return \"$NEW_VERSION\"/" "$ROOT_DIR/decky-plugin/main.py"
+
+# 6. Update iOS Xcode project MARKETING_VERSION
 sed -i -E "s/MARKETING_VERSION = [0-9.]+;/MARKETING_VERSION = $NEW_VERSION;/" "$ROOT_DIR/client/ios/App/App.xcodeproj/project.pbxproj"
 
 echo "✓ Updated all package files to v$NEW_VERSION."

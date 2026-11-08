@@ -54,7 +54,7 @@ sudo systemctl restart plugin_loader.service
 ## 🔗 How to Connect & Link Non-Steam Games
 
 ### ⚡ Quick Pairing via Terminal (Fastest)
-In the OmniAchievements Web App, go to **Settings > Legion Go / Decky**, click **Generate Token**, and click **"Copy 1-Line Command"**.
+In the OmniAchievements Web App, go to **Settings > Steam Deck & Handhelds**, click **Generate Token**, and click **"Copy 1-Line Command"**.
 Paste that single command into **Konsole** (or via SSH) on your handheld:
 ```bash
 sudo mkdir -p ~/homebrew/settings/OmniAchievements ~/.config && echo '{"server_url":"http://192.168.1.XXX:3001","token":"YOUR_TOKEN_HERE"}' | sudo tee ~/homebrew/settings/OmniAchievements/config.json ~/.config/omni_achievements_decky.json >/dev/null && sudo systemctl restart plugin_loader.service

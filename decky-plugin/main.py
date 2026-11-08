@@ -184,7 +184,7 @@ class Plugin:
                 "authenticated": False,
                 "server_url": self.server_url,
                 "server_version": server_ver,
-                "warning": f"Server online (v{server_ver})! Pairing Token is missing. Paste your token from Settings > Legion Go / Decky."
+                "warning": f"Server online (v{server_ver})! Pairing Token is missing. Paste your token from Settings > Steam Deck & Handhelds."
             }
 
         games_res = self._api_request("/games")
@@ -331,10 +331,10 @@ class Plugin:
             if os.path.exists(plugin_path):
                 with open(plugin_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    return data.get("version", "0.2.3")
+                    return data.get("version", "0.2.5")
         except Exception as e:
             print(f"[OmniAchievements] Error reading local version: {e}")
-        return "0.2.3"
+        return "0.2.5"
 
     def _compare_versions(self, v1, v2):
         try:
@@ -549,7 +549,7 @@ class Plugin:
 
     # Lifecycle hooks
     async def _main(self):
-        print("[OmniAchievements] Plugin loaded on SteamOS (Legion Go / Steam Deck)")
+        print("[OmniAchievements] Plugin loaded on SteamOS (Steam Deck & other handhelds)")
 
     async def _unload(self):
         print("[OmniAchievements] Plugin unloaded")
