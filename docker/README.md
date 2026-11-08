@@ -1,6 +1,6 @@
 # 🐳 OmniAchievements Docker Image
 
-Official multi-architecture Docker container for **OmniAchievements** — the self-hosted cross-platform game & achievement synchronizer for iOS, iPadOS, Web, and SteamOS (Legion Go & Steam Deck).
+Official multi-architecture Docker container for **OmniAchievements** — the self-hosted cross-platform game & achievement synchronizer for iOS, iPadOS, Web, and SteamOS (Steam Deck & other handhelds).
 
 [![Image Size](https://img.shields.io/badge/Multi--Arch-amd64%20%7C%20arm64-blue?logo=docker)](https://github.com/santx1/OmniAchievements/pkgs/container/omniachievements)
 [![GitHub Container Registry](https://img.shields.io/badge/GHCR-ghcr.io%2Fsantx1%2Fomniachievements-2496ED?logo=github)](https://github.com/santx1/OmniAchievements/pkgs/container/omniachievements)
@@ -242,4 +242,4 @@ achievements.yourdomain.com {
 
 - **Web Browser**: Navigate to `http://<YOUR_SERVER_IP>:3001` (or your domain).
 - **iOS & iPadOS**: Install the PWA or native IPA from [GitHub Releases](https://github.com/santx1/OmniAchievements/releases), open Settings, and enter your server URL (`http://<YOUR_SERVER_IP>:3001`).
-- **SteamOS / Legion Go / Steam Deck**: Install the OmniAchievements Decky plugin from [GitHub Releases](https://github.com/santx1/OmniAchievements/releases), open the Quick Access Menu, enter your server URL, and paste your device Pairing Token from **Settings > Legion Go / Decky** in the web app.
+- **SteamOS (Steam Deck & Other Handhelds)**: Install the OmniAchievements Decky plugin from [GitHub Releases](https://github.com/santx1/OmniAchievements/releases), open the Quick Access Menu, enter your server URL, and paste your device Pairing Token from **Settings > Legion Go / Decky** in the web app.

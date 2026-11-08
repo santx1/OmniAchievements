@@ -1,6 +1,6 @@
 # 🏆 OmniAchievements Decky Loader Plugin
 
-Synchronize and display custom achievements on non-Steam games in SteamOS on your **Lenovo Legion Go** or **Steam Deck**.
+Synchronize and display custom achievements on non-Steam games in SteamOS on your **Steam Deck & other handhelds** (Legion Go, ROG Ally, Bazzite, etc.).
 
 ---
 
